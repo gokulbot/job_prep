@@ -1,0 +1,282 @@
+%-------------------------
+% Resume in Latex
+% Author : Jake Gutierrez
+% Based off of: https://github.com/sb2nov/resume
+% License : MIT
+%------------------------
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\input{glyphtounicode}
+
+
+%----------FONT OPTIONS----------
+% sans-serif
+% \usepackage[sfdefault]{FiraSans}
+% \usepackage[sfdefault]{roboto}
+% \usepackage[sfdefault]{noto-sans}
+% \usepackage[default]{sourcesanspro}
+
+% serif
+% \usepackage{CormorantGaramond}
+% \usepackage{charter}
+
+
+\pagestyle{fancy}
+\fancyhf{} % clear all header and footer fields
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+% Ensure that generate pdf is machine readable/ATS parsable
+\pdfgentounicode=1
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+    \textbf{\Huge \scshape Gokul Raj Santhosh} \\ \vspace{1pt}
+    \small (+91) 7561867413 $|$ \underline{gokuljalaja@gmail.com} $|$
+    \underline{LinkedIn: linkedin.com/in/gokul-raj-santhosh-14681b174} $|$
+    \underline{GitHub: github.com/gokulbot}
+\end{center}
+
+
+
+
+%-----------SUMMARY-----------
+\section{Summary}
+Robotics Engineer with 3 years of experience in \textbf{Visual Inertial SLAM}, \textbf{sensor fusion}, and \textbf{real-time state estimation} for autonomous systems. Built production-grade \textbf{localization and perception pipelines} in \textbf{C++/ROS}, deployed on \textbf{NVIDIA Jetson Orin}, with hands-on experience in \textbf{IMU pre-integration}, \textbf{loop closure}, \textbf{pose graph optimization}, and \textbf{deep learning-based perception}. Passionate about pushing the boundaries of \textbf{autonomous navigation} in real-world environments.
+
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+    \item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{Indian Institute of Technology, Madras} & 2023 \\
+    \end{tabular*}\vspace{-7pt}
+    \small
+    \begin{itemize}[leftmargin=0in, label={}]
+      \item Dual Degree in Engineering \hfill CGPA: 8.56
+      \item BTech: Mechanical Engineering
+      \item MTech: Robotics
+    \end{itemize}
+    \vspace{-5pt}
+  \resumeSubHeadingListEnd
+
+
+%-----------EXPERIENCE-----------
+\section{Experience}
+  \resumeSubHeadingListStart
+
+    \resumeSubheading
+      {Robotics Engineer}{Jan 2025 -- Present}
+      {Addverb}{Noida, India}
+      
+    \vspace{2pt}
+    \textit{\small \textbf{Simulation Pipeline}}
+    \resumeItemListStart
+      \resumeItem{Developed a comprehensive \textbf{simulation pipeline} in \textbf{Isaac Sim} for \textbf{Trakr} quadruped robot, integrating \textbf{stereo cameras, LiDAR, and IMU} sensor suite for validating \textbf{Navigation and Perception algorithms}}
+      \resumeItem{Trained a \textbf{PPO-based locomotion controller} using \textbf{RSL RL} and \textbf{Legged Gym} within \textbf{Isaac Lab}, designing \textbf{custom reward functions} and tuning \textbf{hyperparameters} to achieve stable, robust locomotion}
+    \resumeItem{\textbf{Open-sourced} the complete pipeline, enabling continuous algorithm development during hardware downtime and accelerating team collaboration}
+    \resumeItemListEnd
+      
+\vspace{2pt}
+    \textit{\small \textbf{Visual Inertial SLAM}}
+    \resumeItemListStart
+      \resumeItem{Implemented a \textbf{Visual Inertial SLAM pipeline} with tightly-coupled \textbf{IMU pre-integration}, \textbf{sliding window optimization}, and a \textbf{mapping module} for real-time localization and mapping}
+      \resumeItem{Built a \textbf{loop closure module} with global descriptor retrieval (\textbf{CosPlace} + \textbf{FAISS}), geometric verification via \textbf{SuperPoint} + \textbf{LightGlue}, and pose graph optimization with \textbf{GNC outlier rejection}}
+      \resumeItem{Implemented \textbf{map-based relocalization} using a persisted descriptor map, enabling robust \textbf{tracking recovery} after odometry failure}
+      \resumeItem{Handled \textbf{dynamic objects} by integrating async \textbf{YOLOv8-seg} segmentation with confidence-based feature downweighting, improving robustness in human-present environments}
+      \resumeItem{Deployed the complete software stack on \textbf{NVIDIA Jetson Orin}, achieving real-time operation at \textbf{20 Hz}; evaluated on \textbf{EuRoC Machine Hall} sequences with translational \textbf{RMSE of 0.28\%} and rotation error of \textbf{0.020\textdegree/m}}
+      \resumeItem{As a \textbf{POC}, upgraded the visual front-end to \textbf{SuperPoint} + \textbf{LightGlue} (TensorRT), reducing translation RMSE by \textbf{21.9\%} and rotation RMSE by \textbf{9.5\%}}
+    \resumeItemListEnd
+          
+
+   % \vspace{2pt}
+   %    \textit{\small \textbf{Uncertainty-Aware Visual SLAM}$^{*}$}
+   %    \resumeItemListStart
+   %      \resumeItem{Implemented \textbf{deep learning-based visual odometry} inspired by \textbf{\href{https://mac-vo.github.io/}{\color{blue}MAC-VO}}, utilizing \textbf{learned feature extractors} with \textbf{keypoint covariance estimation} for improved pose optimization}
+   %      \resumeItem{Integrated learned VO model into \textbf{SLAM framework}, leveraging \textbf{uncertainty-aware features} to enhance robustness in challenging scenarios including texture-less and dynamic environments}
+   %    \resumeItemListEnd
+
+   \resumeSubheading
+      {Perception Engineer}{June 2023 -- Jan 2025}
+      {Monarch Tractor}{Hyderabad, India}
+      
+      \vspace{2pt}
+      \textit{\small \textbf{Visual SLAM}}
+      \resumeItemListStart
+        \resumeItem{Conducted an in-depth literature review on \textbf{Visual Inertial SLAM} techniques such as \textbf{ORB-SLAM3}, \textbf{S-PTAM}, \textbf{Open VINS} and \textbf{VINS-Fusion} and benchmarked the same for translation and rotation errors as well as computational efficiency}
+        \resumeItem{Tuned and deployed these SLAM algorithms by writing \textbf{ROS Wrappers} and \textbf{docker containers} while achieving a translational \textbf{RMSE} of \textbf{2.7711\%} and average rotation error of \textbf{0.160 deg/m}}
+      \resumeItemListEnd
+      
+      \vspace{2pt}
+      \textit{\small \textbf{Inertial Odometry}}
+      \resumeItemListStart
+        \resumeItem{Improved GPS devoid localization by developing a \textbf{GRU}-based \textbf{DNN} tailored for inertial navigation}
+        \resumeItem{Performed comprehensive data collection and cleaning to train the neural network, resulting in a mean \textbf{translation error} of \textbf{0.20 m} and a mean \textbf{rotational error} of \textbf{1.87 degrees} at the end of a \textbf{10 second sequence}}
+        \resumeItem{Successfully deployed the model on a fleet of \textbf{400 tractors}, achieving real-time inertial navigation at \textbf{100 Hz} across diverse operational conditions}
+      \resumeItemListEnd
+      
+      \vspace{2pt}
+      \textit{\small \textbf{Visual Localization}}
+      \resumeItemListStart
+        \resumeItem{Developed a \textbf{visual relocalization} feature for the current \textbf{SLAM} system, improving performance and reliability in \textbf{GPS denied} indoor environments}
+        \resumeItem{Implemented a \textbf{visual localization} module, utilizing pre-saved \textbf{keyframes}/\textbf{fiduciary markers} and integrated the results into a \textbf{pose graph optimizer} to improve the trajectory accuracy to enhance the system's ability to relocalize efficiently}
+      \resumeItemListEnd
+      
+      \vspace{2pt}
+      \textit{\small \textbf{Go To Planner}}
+      \resumeItemListStart
+        \resumeItem{Developed a novel \textbf{map representation} which segments the navigation space into map elements like \textbf{Roads}, \textbf{Intersections} and \textbf{Free space}}
+        \resumeItem{Developed a custom \textbf{RRT\textsuperscript{*}} based \textbf{local motion planner} which generates a set of navigable paths for a given map element}
+        \resumeItem{Demonstrated a \textbf{Proof of concept (POC)} which can generate shortest feasible global path within \textbf{10 msec} compared to the existing approach which takes \textbf{5 sec} approximately}
+      \resumeItemListEnd
+      
+      \vspace{2pt}
+      \textit{\small \textbf{Localization Stack Maintenance}}
+      \resumeItemListStart
+        \resumeItem{\textbf{Depth Map compression:} Implemented a \textbf{lossless depth map compression} module based on \textbf{Fast Lossless Depth Image Compression}, accelerating depth map compression by \textbf{8 times}}
+        \resumeItem{\textbf{Wheel radius Calibration:} Developed a \textbf{real-time tire radius calibration} module using wheel speeds to improve vehicle localization accuracy}
+        \resumeItem{\textbf{Complementary filter:} Implemented a \textbf{complementary filter} based on \textbf{multi-sensor fusion} from the \textbf{Inertial Measurement Unit (IMU)} measurements to determine the vehicle's orientation, providing an \textbf{accuracy of 0.8 degrees}}
+      \resumeItemListEnd
+
+  \resumeSubHeadingListEnd
+
+
+%-----------PROJECTS-----------
+\section{Projects}
+    \resumeSubHeadingListStart
+      \resumeProjectHeading
+          {\textbf{Indoor Mobile Robot} $|$ \emph{ROS, C++, Python, OpenCV, LIDAR, AprilTags}}{Aug 2022 -- Apr 2023}
+          
+          \vspace{2pt}
+          \textit{\small \textbf{Localization Stack}}
+          \resumeItemListStart
+            \resumeItem{Designed and implemented a \textbf{multi-sensor localization} stack for an indoor mobile robot, fusing data from \textbf{Wheel encoders}, \textbf{IMU}, \textbf{2D-LIDAR}, and \textbf{AprilTags} to achieve accuracy within \textbf{10 cm}}
+            \resumeItem{Developed an efficient algorithm to extract \textbf{line features} from \textbf{2D LIDAR} data and associate them with map elements such as \textbf{corners} and \textbf{walls}}
+            \resumeItem{Implemented a \textbf{camera pose estimation} module based on \textbf{AprilTags} strategically positioned in the map for accurate relative pose calculation}
+            \resumeItem{Designed and implemented an optimized \textbf{Extended Kalman Filter (EKF)} for real-time \textbf{sensor fusion}, enhancing position update efficiency through \textbf{Numba}-based optimization}
+          \resumeItemListEnd
+          
+          \vspace{2pt}
+          \textit{\small \textbf{Planning Stack}}
+          \resumeItemListStart
+            \resumeItem{Developed and implemented a comprehensive \textbf{navigation system} for an indoor mobile robot, incorporating a \textbf{global path planner} and a \textbf{local motion planner} with \textbf{obstacle avoidance}}
+            \resumeItem{Implemented an \textbf{A\textsuperscript{*}}-based \textbf{global planning} module using an \textbf{occupancy grid map} along with a \textbf{trajectory sampling-based local motion planner} with \textbf{obstacle avoidance} for real-time navigation}
+          \resumeItemListEnd
+          
+      % \resumeProjectHeading
+      %     {\textbf{VLA-Based Robot Control} $|$ \emph{Python, PyTorch, ROS}}{Month Year -- Month Year}
+      %     \resumeItemListStart
+      %       \resumeItem{Implemented \textbf{Vision-Language-Action (VLA)} model for \textbf{robot control}, enabling natural language-guided manipulation tasks}
+      %       \resumeItem{Integrated \textbf{pre-trained vision-language models} with robot action prediction networks for end-to-end visuomotor control}
+      %       \resumeItem{Developed data collection and training pipeline for fine-tuning VLA models on custom manipulation tasks}
+      %     \resumeItemListEnd
+          
+      % \resumeProjectHeading
+      %     {\textbf{RRT\textsuperscript{*} based Path Planning} $|$ \emph{C++, Python, Pybind11}}{Oct 2024}
+      %     \resumeItemListStart
+      %       \resumeItem{Built an \textbf{RRT\textsuperscript{*}} based \textbf{motion planning} framework in \textbf{C++} from scratch, focusing on efficient \textbf{global path planning}}
+      %       \resumeItem{Smoothened the final path using a combination of \textbf{Artificial potential fields} and \textbf{elastic functions} for smoother and more efficient trajectories}
+      %       \resumeItem{Designed software architecture for quick prototyping and testing by using \textbf{\href{https://pybind11.readthedocs.io/}{\color{blue}Pybind11}} to connect the planner and simulator. Utilized \textbf{\href{https://github.com/features/actions}{\color{blue}GitHub Actions}}, \textbf{Git hooks} and \textbf{unit tests} for continuous code quality checks and standard enforcements}
+      %     \resumeItemListEnd
+    \resumeSubHeadingListEnd
+
+%
+%-----------PROGRAMMING SKILLS-----------
+\section{Technical Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Languages}{: C++, Python, C, MATLAB} \\
+     \textbf{Frameworks}{: ROS, PyTorch, OpenCV, Ceres, Sophus, Eigen, GTSAM, FAISS, Isaac Sim, Isaac Lab} \\
+     \textbf{Developer Tools}{: Git, Docker, gtest, unittest} \\
+     \textbf{Hardware}{: NVIDIA Jetson Orin, Stereo Cameras, LiDAR, IMU, Wheel Encoders, AprilTags} \\
+     \textbf{Specializations}{: Visual Inertial SLAM, Sensor Fusion, Motion Planning, Deep Learning, Reinforcement Learning, Quadruped Locomotion}
+    }}
+ \end{itemize}
+
+%-----------INTERESTS-----------
+\section{Personal Interests}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     Reading books, Music, Writing, Chess
+    }}
+ \end{itemize}
+
+
+%-------------------------------------------
+\end{document}
