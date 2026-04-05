@@ -1,23 +1,23 @@
 # C++ Practice Track (Extracted)
 
 ### Day 1 — Apr 3
-1. Implement a class with a raw pointer member — follow Rule of 3 (copy ctor, copy assign, destructor)
-2. Replace raw pointer with `unique_ptr` — notice what disappears
-3. Pointer arithmetic: traverse an array using `int*` without `[]`
+1. ✅ Implement a class with a raw pointer member — follow Rule of 3 (copy ctor, copy assign, destructor)
+2. ✅ Replace raw pointer with `unique_ptr` — notice what disappears
+3. ✅ Pointer arithmetic: traverse an array using `int*` without `[]`
 
 ---
 
 ### Day 2 — Apr 4
-1. Stack vs heap: benchmark allocating 1M ints on stack vs heap, explain the difference
-2. Write a function that deliberately causes a memory leak; then fix it with `delete`
-3. Implement `make_unique` from scratch using `new` + template
+1. ✅ Stack vs heap: benchmark allocating 1M ints on stack vs heap, explain the difference
+2. ✅ Write a function that deliberately causes a memory leak; then fix it with `delete`
+3. ✅ Implement `make_unique` from scratch using `new` + template
 
 ---
 
 ### Day 3 — Apr 5
-1. Build an RAII `FileHandle` class — opens file in ctor, closes in dtor, no manual cleanup
-2. Demonstrate that RAII works even when an exception is thrown mid-function
-3. Write a `ScopedTimer` using RAII that prints elapsed time on scope exit
+1. ✅ Build an RAII `FileHandle` class — opens file in ctor, closes in dtor, no manual cleanup
+2. ✅ Demonstrate that RAII works even when an exception is thrown mid-function
+3. ✅ Write a `ScopedTimer` using RAII that prints elapsed time on scope exit
 
 ---
 

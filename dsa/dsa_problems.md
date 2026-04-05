@@ -4,12 +4,12 @@
 
 | # | Problem | Pattern |
 |---|---------|---------|
-| 20 | Valid Parentheses | Hash/Design |
-| 125 | Valid Palindrome | Two Pointers |
+| ~~20~~ | ~~Valid Parentheses~~ ✅ | Hash/Design |
+| ~~125~~ | ~~Valid Palindrome~~ ✅ | Two Pointers |
 | ~~190~~ | ~~Reverse Bits~~ ✅ | Math/Bit |
 | ~~191~~ | ~~Number of 1 Bits~~ ✅ | Math/Bit |
 | ~~242~~ | ~~Valid Anagram~~ ✅ | Hash/Design |
-| 800 | Letter Case Permutation | Backtracking |
+| ~~784~~ | ~~Letter Case Permutation~~ ✅ | Backtracking |
 | ~~1014~~ | ~~K Closest Points to Origin~~ ✅ | Heap |
 
 ---

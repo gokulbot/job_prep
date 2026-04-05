@@ -39,3 +39,13 @@ void SLAMBackendContext::getPose() {
         slam_backend_->getPose();
     }
 }
+
+int main() {
+    SLAMBackendContext context;
+
+    context.setBackend(std::make_unique<VINSFusion>());
+    context.getPose();   // got ViNS Pose
+
+    context.setBackend(std::make_unique<ORBSALM3>());
+    context.getPose();   // got ORBSALM3 Pose
+}

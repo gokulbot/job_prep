@@ -33,7 +33,7 @@ $$P_{k|k-1} = FP_{k-1|k-1}F^\top + Q$$
 
 ---
 
-## M2 — Inverse Depth Parameterization: Distribution Derivation
+## M2 — Inverse Depth Parameterization: Distribution Derivation ✅
 
 ### Problem Statement
 In monocular SLAM and visual odometry, depth $d$ is often reparameterized as inverse depth $\rho = 1/d$. Derive what distribution $\rho$ follows if $d$ follows a Gaussian, and motivate why inverse depth is preferred.

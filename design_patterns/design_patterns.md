@@ -1,13 +1,13 @@
 # Design Pattern Questions (Extracted)
 
-### Day 1 — Apr 3 | Singleton
+### Day 1 — Apr 3 | Singleton ✅
 **Design Pattern:** Singleton — lazy init, thread-safe variant, Meyers' singleton  
 **SLAM Question:**  
 In a SLAM system, how would you ensure that the global map manager is implemented as a singleton so that multiple threads (e.g., LiDAR and camera pipelines) do not create conflicting map instances?
 
 ---
 
-### Day 2 — Apr 4 | Factory Method
+### Day 2 — Apr 4 | Factory Method ✅
 **Design Pattern:** Factory Method — virtual creator, concrete products, open/closed principle  
 **SLAM Question:**  
 How would you design a factory method to dynamically create different sensor processing modules (LiDAR, Stereo Camera, RGB-D) in a SLAM pipeline?
@@ -133,7 +133,7 @@ How would you model robot states (initializing, tracking, lost, relocalizing) in
 
 ---
 
-### Day 20 — Apr 22 | Strategy
+### Day 20 — Apr 22 | Strategy ✅
 **Design Pattern:** Strategy — interchangeable algorithms, sort strategies, payment methods  
 **SLAM Question:**  
 How would you dynamically switch between localization algorithms (EKF, Particle Filter, Graph-based) using the Strategy pattern?

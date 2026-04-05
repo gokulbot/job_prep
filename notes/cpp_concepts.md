@@ -2,6 +2,109 @@
 
 ---
 
+## Rule of Three (Raw Pointer Members)
+
+If your class owns a raw pointer, you **must** define all three:
+
+| Method | Why |
+|--------|-----|
+| Destructor | `delete` the pointer — prevents memory leak |
+| Copy constructor | Allocate new memory and copy the value — prevents double-free |
+| Copy assignment | Delete old, allocate new, copy value — prevents leak + double-free |
+
+```cpp
+class Test {
+public:
+    Test() = default;
+
+    // Copy constructor
+    Test(const Test& other) {
+        if (other.x_ != nullptr) {
+            x_ = new int;
+            *x_ = *(other.x_);
+        } else {
+            x_ = nullptr;
+        }
+    }
+
+    // Copy assignment
+    Test& operator=(const Test& other) {
+        if (this == &other) return *this;   // self-assignment guard
+        delete x_;                           // free old memory first
+        if (other.x_ != nullptr) {
+            x_ = new int;
+            *x_ = *(other.x_);
+        } else {
+            x_ = nullptr;
+        }
+        return *this;
+    }
+
+    // Destructor
+    ~Test() {
+        delete x_;   // delete nullptr is safe (no-op)
+    }
+
+private:
+    int* x_ = nullptr;
+};
+```
+
+**Key gotchas:**
+- Always `delete x_` before reassigning in copy assignment — otherwise you leak the old memory
+- Always check `this == &other` in copy assignment — `a = a` would delete then read freed memory
+- `delete nullptr` is safe — no need to null-check before deleting
+
+---
+
+## Rule of Three with `unique_ptr`
+
+Replacing a raw pointer with `unique_ptr` eliminates the destructor — cleanup is automatic. But copy constructor and copy assignment still need manual definitions since `unique_ptr` is **not copyable**.
+
+```cpp
+class Test {
+public:
+    Test() = default;
+
+    // Copy constructor — allocate new and copy value
+    Test(const Test& other) {
+        if (other.x_ != nullptr)
+            x_ = std::make_unique<int>(*other.x_);
+        else
+            x_ = nullptr;
+    }
+
+    // Copy assignment
+    Test& operator=(const Test& other) {
+        if (this == &other) return *this;
+        if (other.x_ != nullptr)
+            x_ = std::make_unique<int>(*other.x_);
+        else
+            x_ = nullptr;
+        return *this;
+    }
+
+    ~Test() = default;   // unique_ptr cleans up automatically
+
+private:
+    std::unique_ptr<int> x_;
+};
+```
+
+**What disappears vs raw pointer:**
+- No `delete x_` anywhere — `unique_ptr` destructor handles it
+- No null-check before delete — `unique_ptr` does it internally
+
+**Key gotcha — don't move in a copy:**
+```cpp
+x_ = std::move(other.x_);       // WRONG in copy — steals from other, leaving it null
+x_ = std::make_unique<int>(*other.x_);  // CORRECT — allocates new, copies value
+```
+
+**Header:** `#include <memory>`
+
+---
+
 ## RAII — Resource Acquisition Is Initialization
 
 **Core idea:** Acquire a resource in the constructor, release it in the destructor. C++ guarantees the destructor runs when the object goes out of scope — even if an exception is thrown.
@@ -137,6 +240,18 @@ void expensiveFunction() {
 
 **Core idea:** `throw` stops execution immediately and unwinds the stack until a matching `catch` is found. If nothing catches it, the program terminates.
 
+**What happens when an exception is not caught:**
+```
+throw → unwind stack looking for catch → finds none → std::terminate() → crash
+```
+Destructors **may not run** during `terminate()` — so RAII cleanup is not guaranteed. Always catch exceptions if you need destructors to fire.
+
+**What happens when it IS caught:**
+```
+throw → unwind stack → destructors run during unwind → catch handles it → program continues
+```
+Destructors are guaranteed to run during stack unwinding — that's what makes RAII exception-safe.
+
 **Syntax:**
 ```cpp
 throw std::runtime_error("message");
@@ -215,7 +330,7 @@ private:
 auto f = RAIIfile::create("log.txt");
 if (!f) { /* handle error */ }
 
----
+
 
 ## Virtual Functions, Pure Virtual Functions & Interfaces
 
@@ -520,3 +635,384 @@ No vtable. No vptr. The compiler resolves `processFrameImpl` at compile time.
 - `SLAMBackendContext` swaps backends at runtime based on sensor state → virtual is correct
 - Per-keypoint descriptor computation in a tight loop → template would be better
 - `std::vector<T>`, `std::sort` → templates, zero overhead
+
+---
+
+## lvalue vs rvalue — References and Temporaries
+
+**lvalue** — has a name and an address, persists beyond the expression:
+```cpp
+int i = 5;   // i is an lvalue
+```
+
+**rvalue** — a temporary, no address, exists only for the expression:
+```cpp
+i + 1        // temporary — rvalue
+```
+
+**The rule:** a non-const reference (`int&`) can only bind to an lvalue. Passing a temporary to `int&` is a compile error:
+
+```cpp
+void f(int& x) { ... }
+
+int i = 0;
+f(i);      // OK — i is an lvalue
+f(i + 1);  // ERROR — i+1 is a temporary
+```
+
+**Fix:** pass by value when you need to pass expressions like `i+1`:
+```cpp
+void f(int x) { ... }
+f(i + 1);  // OK — creates a copy
+```
+
+**Backtracking gotcha:** in recursive backtracking, always pass `index` and `current` by value, not by reference — each call needs its own copy:
+```cpp
+// WRONG
+void solve(int& i, string& temp, ...)
+    solve(i+1, temp + s[i], ...)  // ERROR — temporaries can't bind to references
+
+// CORRECT
+void solve(int i, string temp, ...)
+    solve(i+1, temp + s[i], ...)  // OK — copies made for each recursive call
+```
+
+---
+
+## How Data is Stored — Bits, Hex, and Type Casting
+
+**At the hardware level, everything is binary (bits).** Only 0s and 1s exist. All types — `int`, `float`, `char` — are just bits in memory.
+
+**Hex is just human shorthand** for reading binary — every 4 bits = 1 hex digit:
+```
+binary:   1111 1111
+hex:      FF
+decimal:  255
+char:     '\xff'
+```
+Same bits, four different ways to look at them.
+
+### char is just an integer with an ASCII mapping
+
+`char` is an 8-bit integer. ASCII is a standard agreement that maps numbers to symbols:
+```
+65 → 'A'
+97 → 'a'
+48 → '0'
+```
+
+```cpp
+char c = 65;
+cout << c;        // prints: A
+cout << (int)c;   // prints: 65  — same bits, different interpretation
+```
+
+### Type casting: two kinds
+
+**1. Reinterpretation (no conversion) — `char` ↔ `int`:**
+Both are plain integers, same binary format. Casting just changes how the compiler reads them — bits don't change:
+```cpp
+(int)'A'    // → 65
+(char)65    // → 'A'
+```
+
+**2. Actual conversion — `float` ↔ `int`:**
+`float` uses IEEE 754 (sign + exponent + mantissa), `int` is plain binary — completely different formats. The CPU must actually convert, and the bits change:
+```cpp
+float f = 3.7;
+int i = (int)f;   // i = 3 — decimal truncated (not rounded)
+```
+
+### `toupper`/`tolower` return `int`
+They do ASCII math (`'a' - 32 = 'A'`) and return `int` for historical C reasons (to handle `EOF = -1` which doesn't fit in a `char`). Cast explicitly:
+```cpp
+temp + (char)toupper(s[i])   // correct — cast back to char
+```
+
+---
+
+## Pointer Arithmetic
+
+An array name decays to a pointer to its first element. You can traverse it using `+` and `*` instead of `[]`:
+
+```cpp
+int arr[] = {1, 2, 3, 4, 5};
+
+for (int i = 0; i < 5; i++) {
+    std::cout << *(arr + i) << " ";
+}
+```
+
+**Key fact:** `arr[i]` and `*(arr + i)` are **literally identical** — the compiler generates the same code for both. `[]` is just syntactic sugar for pointer arithmetic.
+
+- `arr` → pointer to first element
+- `arr + i` → pointer to i-th element
+- `*(arr + i)` → value at i-th element
+
+---
+
+## Stack vs Heap
+
+| | Stack | Heap |
+|--|-------|------|
+| Management | Automatic | Manual (`new`/`delete`) |
+| Size | ~8MB fixed | Bounded by RAM |
+| Speed | Very fast (pointer decrement) | Slower (OS allocator) |
+| Lifetime | Until scope ends | Until `delete` is called |
+
+```cpp
+void foo() {
+    int x = 5;           // stack — freed when foo() returns
+    int* y = new int;    // heap — lives until delete
+    delete y;            // must manually free
+}
+```
+
+**Fixed-size array → stack:**
+```cpp
+int arr[5] = {1,2,3,4,5};   // stack
+```
+
+**`new` → always heap:**
+```cpp
+int* arr = new int[5];       // heap — must delete[] arr
+```
+
+**`std::vector` → both:**
+- The vector object (size, capacity, pointer) → stack
+- The actual data → heap (vector internally calls `new`)
+- Vector destructor frees the heap data automatically (RAII)
+
+**Key insight:** `unique_ptr` and containers like `vector` exist to make heap behave like stack — automatic cleanup via destructors.
+
+---
+
+## `std::map` vs `std::unordered_map`
+
+| | `std::map` | `std::unordered_map` |
+|--|-----------|---------------------|
+| Underlying structure | Red-black tree (BST) | Hash table |
+| Lookup | O(log n) | O(1) average |
+| Insert | O(log n) | O(1) average |
+| Order | Sorted by key | No order |
+| Worst case | O(log n) — guaranteed | O(n) — hash collisions |
+
+**`map` — no hashing at all.** Keys are compared using `<` to navigate left/right in the tree. Keys must be sortable/comparable.
+
+**`unordered_map` — hash table with buckets:**
+```
+bucket[0] → null
+bucket[3] → "alice" → "carol" → null   ← collision, both hashed to 3
+bucket[7] → "bob" → null
+```
+Worst case: all keys hash to same bucket → linked list scan → O(n).
+
+**`map` worst case is always O(log n)** because the red-black tree self-balances — height is always guaranteed to be O(log n).
+
+**Duplicate keys:**
+- `map` / `unordered_map` — no duplicates, inserting same key overwrites value
+- `std::multimap` — allows duplicate keys, same red-black tree structure
+
+**Use `map` when:** need sorted order, or want guaranteed O(log n) worst case.
+**Use `unordered_map` when:** need fast average lookup, don't care about order.
+
+---
+
+## `enum` vs `enum class`
+
+| | `enum` | `enum class` |
+|--|--------|-------------|
+| Scope | Global — pollutes namespace | Scoped — must use `Color::RED` |
+| Implicit int conversion | Yes | No |
+| Name conflicts | Can clash with other enums | Safe |
+
+```cpp
+// enum — pollutes namespace, implicit int conversion
+enum Color { RED, GREEN, BLUE };
+int x = RED;   // allowed — implicit int conversion
+
+// enum class — scoped, no implicit conversion
+enum class Color { RED, GREEN, BLUE };
+int x = Color::RED;    // ERROR — no implicit conversion
+Color c = Color::RED;  // correct
+```
+
+**Name clash example:**
+```cpp
+enum Direction { UP, DOWN };
+enum Status { UP, DOWN };      // ERROR — UP already defined!
+
+enum class Direction { UP, DOWN };
+enum class Status { UP, DOWN }; // fine — Direction::UP vs Status::UP
+```
+
+**Always prefer `enum class`** — safer scoping, no accidental int conversions, no name clashes.
+
+---
+
+## Abstract Data Types (ADT)
+
+**ADT = the contract** — defines what operations are available, not how they're implemented.
+
+| ADT | Operations | Possible Implementations |
+|-----|-----------|--------------------------|
+| Stack | push, pop, peek | array, linked list |
+| Queue | enqueue, dequeue | array, linked list |
+| Map | insert, lookup, delete | BST, hash table |
+
+**In C++:** ADT = abstract base class with pure virtual functions. Implementation = concrete derived class.
+
+### Virtual functions approach (runtime polymorphism)
+
+```cpp
+class SensorInterface {
+public:
+    virtual void readData() = 0;
+    virtual std::string getSensorType() = 0;
+    virtual ~SensorInterface() = default;
+};
+
+class Camera : public SensorInterface {
+public:
+    void readData() override { std::cout << "Reading RGB image\n"; }
+    std::string getSensorType() override { return "Camera"; }
+};
+
+class LiDAR : public SensorInterface {
+public:
+    void readData() override { std::cout << "Reading point cloud\n"; }
+    std::string getSensorType() override { return "LiDAR"; }
+};
+
+int main() {
+    std::vector<std::unique_ptr<SensorInterface>> sensors;
+    sensors.push_back(std::make_unique<Camera>());
+    sensors.push_back(std::make_unique<LiDAR>());
+
+    for (auto& s : sensors) {
+        std::cout << s->getSensorType() << ": ";
+        s->readData();
+    }
+}
+```
+
+### `std::variant` approach (compile-time polymorphism)
+
+No inheritance, no virtual functions, no vtable overhead:
+
+```cpp
+#include <variant>
+
+struct Camera {
+    void readData()        { std::cout << "Reading RGB image\n"; }
+    std::string getSensorType() { return "Camera"; }
+};
+
+struct LiDAR {
+    void readData()        { std::cout << "Reading point cloud\n"; }
+    std::string getSensorType() { return "LiDAR"; }
+};
+
+int main() {
+    std::vector<std::variant<Camera, LiDAR>> sensors;
+    sensors.push_back(Camera{});
+    sensors.push_back(LiDAR{});
+
+    for (auto& s : sensors) {
+        std::visit([](auto& sensor) {
+            std::cout << sensor.getSensorType() << ": ";
+            sensor.readData();
+        }, s);
+    }
+}
+```
+
+**`std::visit` explained:**
+- Applies the lambda to whatever the variant currently holds
+- `auto&` makes it a generic lambda — compiler generates a version for each type
+- Internally equivalent to:
+```cpp
+if s holds Camera → call lambda(get<Camera>(s))
+if s holds LiDAR  → call lambda(get<LiDAR>(s))
+```
+But resolved at compile time via templates — no runtime overhead.
+
+**When to use which:**
+
+| | Virtual functions | `std::variant` |
+|--|------------------|----------------|
+| Types known at compile time | No | Yes — fixed set |
+| Add new types at runtime | Yes | No |
+| Performance | vtable overhead | Faster — compile time |
+| Inheritance needed | Yes | No |
+
+---
+
+## `static` Keyword — All Uses
+
+| Where | Meaning |
+|-------|---------|
+| Local variable in function | Persist across calls, created once |
+| Method in class | Call without an object instance |
+| Member variable in class | Shared across all objects of that class |
+| Global/file scope | Private to this translation unit only |
+
+**1. Local variable in function — persist across calls:**
+```cpp
+void foo() {
+    static int count = 0;
+    count++;
+    std::cout << count << "\n";
+}
+foo();   // 1
+foo();   // 2
+foo();   // 3  — not reset, persists
+```
+
+**2. Static method — call without an object:**
+```cpp
+class Foo {
+public:
+    static void bar() { ... }
+};
+Foo::bar();   // no object needed
+```
+
+**3. Static member variable — shared across all objects:**
+```cpp
+class Foo {
+    static int count;   // one copy shared by all Foo instances
+};
+```
+
+**4. Static at file/global scope — private to translation unit:**
+```cpp
+// file1.cpp
+static int x = 5;   // only visible in file1.cpp — not exported to linker
+
+// file2.cpp
+static int x = 10;  // separate variable, no conflict
+```
+Without `static`, `int x` at global scope is visible across all files — duplicate definitions cause linker errors.
+
+---
+
+## `make_unique` from Scratch
+
+`std::make_unique<T>(value)` is just a template function that calls `new` and wraps the result in a `unique_ptr`:
+
+```cpp
+#include <memory>
+
+template<typename T>
+std::unique_ptr<T> my_make_unique(T value) {
+    return std::unique_ptr<T>(new T(value));
+}
+
+// Usage
+auto p = my_make_unique<int>(42);
+std::cout << *p << "\n";   // 42
+```
+
+**Why it's a function, not a class:** it just allocates and wraps — no state needed.
+**Why use it over `new` directly:** safer — if an exception is thrown, the `unique_ptr` still cleans up. Raw `new` in complex expressions can leak.
