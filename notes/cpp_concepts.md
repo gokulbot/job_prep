@@ -997,6 +997,143 @@ Without `static`, `int x` at global scope is visible across all files — duplic
 
 ---
 
+## `shared_ptr` — Internals and Cycle Problem
+
+### How `shared_ptr` Works Internally
+
+`shared_ptr` keeps a **control block** — a separate heap allocation created alongside the object. The control block holds:
+- **ref count** — number of `shared_ptr`s pointing to the object
+- **weak count** — number of `weak_ptr`s pointing to the object
+- **custom deleter** (if any)
+
+```
+shared_ptr<A> a = make_shared<A>();
+
+Memory layout:
+  a  →  [ control block | ref=1, weak=0 ]
+         [ A object                      ]
+```
+
+When you copy a `shared_ptr`, both copies point to the same control block and increment the ref count:
+```cpp
+shared_ptr<A> b = a;   // ref count → 2
+```
+
+When a `shared_ptr` is destroyed, ref count decrements. When it hits 0, the object is destroyed. When weak count also hits 0, the control block is freed.
+
+### Cycle Problem
+
+```cpp
+class A { public: shared_ptr<B> b; ~A() { cout << "A destroyed\n"; } };
+class B { public: shared_ptr<A> a; ~B() { cout << "B destroyed\n"; } };
+
+shared_ptr<A> a = make_shared<A>();  // A ref count = 1
+shared_ptr<B> b = make_shared<B>();  // B ref count = 1
+a->b = b;   // B ref count → 2
+b->a = a;   // A ref count → 2
+
+// main returns:
+// a goes out of scope → A ref count → 1 (b->a still holds it)
+// b goes out of scope → B ref count → 1 (a->b still holds it)
+// Neither hits 0 → neither destructor fires → LEAK
+```
+
+Symptom: run the program and neither "A destroyed" nor "B destroyed" prints.
+
+### Fix — `weak_ptr`
+
+`weak_ptr` observes an object without incrementing the ref count. Break the cycle by making one side `weak_ptr`:
+
+```cpp
+class B { public: weak_ptr<A> a; };  // weak — doesn't increment A's ref count
+
+// Now when main returns:
+// a goes out of scope → A ref count → 0 → A destroyed ✓
+// b goes out of scope → B ref count → 0 → B destroyed ✓
+```
+
+To use the object held by a `weak_ptr`, call `.lock()` — returns a `shared_ptr` if the object still exists, `nullptr` if it's been destroyed:
+```cpp
+if (auto locked = wp.lock()) {
+    locked->doSomething();
+}
+```
+
+### Custom Deleters
+
+By default, `shared_ptr` calls `delete` when ref count hits 0. You can pass a custom function instead — useful for non-heap resources:
+
+```cpp
+shared_ptr<FILE> f(fopen("x.txt", "r"), fclose);   // fclose called instead of delete
+shared_ptr<int> p(new int[10], [](int* p){ delete[] p; });  // array delete
+```
+
+The custom deleter is stored in the control block.
+
+### Implementing `shared_ptr` from Scratch
+
+Key insight: ref count must be **heap allocated** and shared across all copies — if it were a plain `int` member, each object would have its own copy.
+
+```cpp
+template <typename T>
+class shr_ptr {
+public:
+    int* ref_count = nullptr;
+    T* t_;
+
+    // Constructor — allocate object and ref count, start at 1
+    shr_ptr(T val) {
+        t_ = new T(val);
+        ref_count = new int(1);
+    }
+
+    // Copy constructor — share pointer + ref count, just increment
+    // No decrement — this object never owned anything before
+    shr_ptr(const shr_ptr& other) {
+        ref_count = other.ref_count;
+        (*ref_count)++;
+        t_ = other.t_;
+    }
+
+    // Copy assignment — release old, acquire new
+    shr_ptr& operator=(const shr_ptr& other) {
+        if (&other == this) return *this;
+        (*ref_count)--;                        // release old
+        if (*ref_count == 0) { delete t_; delete ref_count; }
+        ref_count = other.ref_count;           // acquire new
+        (*ref_count)++;
+        t_ = other.t_;
+        return *this;
+    }
+
+    // Destructor — decrement, delete if last owner
+    ~shr_ptr() {
+        (*ref_count)--;
+        if (*ref_count == 0) { delete t_; delete ref_count; }
+    }
+
+    T& operator*()  { return *t_; }
+    T* operator->() { return t_; }
+};
+```
+
+**Key rules:**
+- Copy constructor — only increment, never decrement (nothing was owned before)
+- Copy assignment — decrement old first, then increment new
+- Destructor — decrement then check; delete both object and ref count if 0
+- `(*ref_count)++` not `*ref_count++` — postfix `++` binds tighter than `*`, would increment the pointer
+
+### Quick Reference
+
+| | `shared_ptr` | `weak_ptr` |
+|--|-------------|------------|
+| Increments ref count | Yes | No |
+| Keeps object alive | Yes | No |
+| Can access object | Yes (`->`) | Only via `.lock()` |
+| Use case | Shared ownership | Break cycles, optional observer |
+
+---
+
 ## `make_unique` from Scratch
 
 `std::make_unique<T>(value)` is just a template function that calls `new` and wraps the result in a `unique_ptr`:

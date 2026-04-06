@@ -22,9 +22,9 @@
 ---
 
 ### Day 4 — Apr 6
-1. Create a `shared_ptr` cycle between two nodes; verify it leaks with a custom destructor print
-2. Break the cycle using `weak_ptr`; verify destructor fires
-3. Implement a reference-counted smart pointer from scratch (simplified `shared_ptr`)
+1. ✅ Create a `shared_ptr` cycle between two nodes; verify it leaks with a custom destructor print
+2. ✅ Break the cycle using `weak_ptr`; verify destructor fires
+3. ✅ Implement a reference-counted smart pointer from scratch (simplified `shared_ptr`)
 
 ---
 

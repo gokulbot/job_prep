@@ -49,6 +49,24 @@ void f(start, k, nums, result, current):
 
 ---
 
+## Two Pointers
+
+### 3Sum (LC 15)
+
+- Sort first — enables two pointers and adjacent duplicate detection
+- Outer loop fixes `nums[i]`; inner two-pointer finds pairs summing to `-nums[i]`
+- Skip duplicate `nums[i]`: `if (i > 0 && nums[i] == nums[i-1]) continue`
+- After a match, move both pointers then skip duplicates on each side:
+```cpp
+left++; right--;
+while (left < right && nums[left] == nums[left - 1]) left++;
+while (left < right && nums[right] == nums[right + 1]) right--;
+```
+- **Time:** O(n²) — O(n log n) sort + O(n²) two-pointer scan
+- **Space:** O(1)
+
+---
+
 ## Heap
 
 ### What is a Heap?

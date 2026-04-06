@@ -21,21 +21,28 @@
 | 2 | Add Two Numbers | Linked List |
 | 5 | Longest Palindromic Substring | Two Pointers |
 | 11 | Container With Most Water | Two Pointers |
-| 15 | 3Sum | Two Pointers |
+| ~~15~~ | ~~3Sum~~ ✅ | Two Pointers |
 | 16 | 3Sum Closest | Two Pointers |
 | 17 | Letter Combinations of a Phone Number | Backtracking |
 | 19 | Remove Nth Node From End of List | Linked List |
 | 22 | Generate Parentheses | Backtracking |
 | 24 | Swap Nodes in Pairs | Linked List |
+| 33 | Search in Rotated Sorted Array | Misc |
 | 39 | Combination Sum | Backtracking |
 | 40 | Combination Sum II | Backtracking |
 | 47 | Permutations II | Backtracking |
 | 49 | Group Anagrams | Misc |
+| 45 | Jump Game II | DP |
+| 55 | Jump Game | DP |
+| 56 | Merge Intervals | Intervals |
 | 57 | Insert Interval | Intervals |
 | 61 | Rotate List | Linked List |
 | 62 | Unique Paths | DP |
+| 322 | Coin Change | DP |
 | 77 | Combinations | Backtracking |
 | 79 | Word Search | Misc |
+| 90 | Subsets II | Backtracking |
+| 74 | Search a 2D Matrix | Misc |
 | 91 | Decode Ways | DP |
 | 92 | Reverse Linked List II | Linked List |
 | 98 | Validate Binary Search Tree | Trees |
@@ -52,8 +59,10 @@
 | 143 | Reorder List | Linked List |
 | 148 | Sort List | Linked List |
 | 152 | Maximum Product Subarray | DP |
+| 153 | Find Minimum in Rotated Sorted Array | Misc |
 | 198 | House Robber | DP |
 | 199 | Binary Tree Right Side View | Trees |
+| 200 | Number of Islands | Graphs |
 | 207 | Course Schedule | Graphs |
 | 208 | Implement Trie (Prefix Tree) | Hash/Design |
 | 209 | Minimum Size Subarray Sum | Sliding Window |
