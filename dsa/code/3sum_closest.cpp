@@ -1,38 +1,36 @@
 #include <algorithm>
 #include <iostream>
 #include <vector>
-std::vector<std::vector<int>> threeSum(std::vector<int>& nums) {
-    std::vector<std::vector<int>> result;
+int threeSum(std::vector<int>& nums, int target) {
+    int min_sum = INT32_MAX;
+    int closest_sum = 0;
     std::sort(nums.begin(), nums.end());
     for (int i = 0; i < nums.size(); i++) {
         int left = i + 1;
         int right = nums.size() - 1;
 
         while (left < right) {
-            if (nums[left] + nums[right] == -nums[i]) {
-                result.push_back({nums[left], nums[right], nums[i]});
+            int sum = nums[left] + nums[right] + nums[i];
+
+            if (abs(sum - target) < min_sum) {
+                min_sum = abs(sum - target);
+                closest_sum = sum;
                 left++;
-                right--;
-                while (left < right && nums[left] == nums[left - 1]) left++;
-                while (left < right && nums[right] == nums[right + 1]) right--;
-            } else if (nums[left] + nums[right] > -nums[i]) {
+
+            } else if ((nums[left] + nums[right] + nums[i]) > target) {
                 right--;
             } else {
                 left++;
             }
         }
     }
-    return result;
+    return closest_sum;
 }
 
 int main() {
-    std::vector<int> nums = {-1, 0, 1, 2, -1, -4};
-    std::vector<std::vector<int>> result = threeSum(nums);
+    std::vector<int> nums = {-1, 2, 1, -4};
+    int target = 1;
+    int result = threeSum(nums, target);
 
-    for (auto e : result) {
-        for (int i = 0; i < e.size(); i++) {
-            std::cout << e[i] << " ";
-        }
-        std::cout << "\n";
-    }
+    std::cout << result << "\n";
 }

@@ -57,6 +57,153 @@ private:
 
 ---
 
+## Rule of Five (Move Semantics)
+
+Extends Rule of Three by adding move constructor and move assignment — allows stealing resources instead of copying:
+
+| Method | Purpose |
+|--------|---------|
+| Destructor | Free the resource |
+| Copy constructor | Deep copy — allocate new, copy data |
+| Copy assignment | Free old, deep copy — self-assignment guard |
+| Move constructor | Steal pointer, null out source |
+| Move assignment | Free old, steal pointer, null out source — self-assignment guard |
+
+```cpp
+class Buffer {
+    int* data_ = nullptr;
+    int size_;
+public:
+    Buffer(int size) : size_(size), data_(new int[size]) {}
+
+    // Copy constructor — deep copy
+    Buffer(const Buffer& other) : size_(other.size_), data_(new int[other.size_]) {
+        for (int i = 0; i < size_; i++) data_[i] = other.data_[i];
+    }
+
+    // Move constructor — steal, don't copy
+    Buffer(Buffer&& other) : size_(other.size_), data_(other.data_) {
+        other.data_ = nullptr;
+        other.size_ = 0;
+    }
+
+    // Copy assignment
+    Buffer& operator=(const Buffer& other) {
+        if (this == &other) return *this;
+        delete[] data_;
+        size_ = other.size_;
+        data_ = new int[size_];
+        for (int i = 0; i < size_; i++) data_[i] = other.data_[i];
+        return *this;
+    }
+
+    // Move assignment
+    Buffer& operator=(Buffer&& other) {
+        if (this == &other) return *this;
+        delete[] data_;
+        data_ = other.data_;
+        size_ = other.size_;
+        other.data_ = nullptr;
+        other.size_ = 0;
+        return *this;
+    }
+
+    ~Buffer() { delete[] data_; }
+};
+```
+
+**Key rules:**
+- Move constructor/assignment takes `T&&` (not `const T&&`) — must modify the source
+- Always null out source after stealing — otherwise destructor double-frees
+- `delete[]` must match `new[]` — never mix with `delete`
+
+---
+
+## How `delete[]` Knows Array Size
+
+When you allocate with `new int[n]`, the compiler stores the array size in a **hidden metadata field just before the returned pointer**:
+
+```
+[ size=10 | int int int int int int int int int int ]
+            ^
+            your pointer points here
+```
+
+`delete[]` steps back, reads the size, then frees the whole block.
+
+This is why:
+- `delete[]` — correct for arrays, reads metadata
+- `delete` — wrong for arrays, UB (ignores metadata, frees wrong amount)
+
+---
+
+## Initializer List vs Body Assignment
+
+```cpp
+// Body assignment — default construct first, then assign
+Buffer(int size) {
+    size_ = size;  // two operations for objects
+}
+
+// Initializer list — direct construction with value
+Buffer(int size) : size_(size) {}  // one operation
+```
+
+For `int` the difference is negligible. For objects like `std::string` it matters — body assignment default-constructs (empty string) then copies. Initializer list constructs directly.
+
+**Must use initializer list for:**
+- `const` members — can't assign after construction
+- Reference members — can't rebind after construction
+- Base class constructors
+
+---
+
+## Move on Return / RVO
+
+Returning a local variable by value automatically triggers a **move**, not a copy:
+
+```cpp
+Buffer createBuffer(int size) {
+    Buffer temp(size);
+    return temp;  // move constructor called, not copy
+}
+```
+
+The compiler knows `temp` is about to be destroyed, so it steals its resources instead of copying.
+
+**RVO (Return Value Optimization)** goes further — the compiler eliminates even the move and constructs the object directly in the caller's memory. Compile with `-fno-elide-constructors` to disable it and observe the move.
+
+**How the compiler does it — hidden pointer:**
+
+Instead of constructing `temp` on the function's stack and moving it out, the compiler passes a hidden pointer to `createBuffer` pointing to `b`'s memory, and constructs `temp` there directly:
+
+```cpp
+// What you write:
+Buffer b = createBuffer(10);
+
+// What the compiler effectively does:
+// createBuffer receives a hidden pointer to b's memory
+// temp is constructed directly at that address
+// temp and b are literally the same object — no move needed
+```
+
+Without RVO:
+```
+1. construct temp inside function
+2. move temp → b (move constructor)
+3. destroy temp
+```
+
+With RVO:
+```
+1. construct temp directly in b's memory — they're the same object
+```
+
+- **RVO** — unnamed temporary returned, guaranteed eliminated in C++17
+- **NRVO** — named variable returned (like `temp`), eliminated as an optimization (not guaranteed)
+
+---
+
 ## Rule of Three with `unique_ptr`
 
 Replacing a raw pointer with `unique_ptr` eliminates the destructor — cleanup is automatic. But copy constructor and copy assignment still need manual definitions since `unique_ptr` is **not copyable**.
@@ -486,6 +633,74 @@ b->getPose();
 
 **Why this matters in SLAM:**
 In your feature extraction loop (thousands of keypoints per frame), if you called a virtual function per keypoint the vtable overhead would add up. This is why templates / CRTP are preferred for per-element policies.
+
+---
+
+## Manual vtable — Implementing Virtual Dispatch by Hand
+
+You can replicate what the compiler does using function pointers explicitly — no `virtual` keyword:
+
+**1. VTable struct — one slot per virtual function**
+```cpp
+struct VTable {
+    void (*speak)(void*);  // pointer to function returning void, taking void*
+    void (*move)(void*);
+};
+```
+
+Function pointer syntax: `void (*speak)(void*)` means:
+- `void` — return type
+- `(*speak)` — speak is a pointer (parens required!)
+- `(void*)` — takes one void* argument
+
+Without parens: `void *speak(void*)` means a function returning `void*` — completely different.
+
+**2. Define functions per type**
+```cpp
+void dog_speak(void* self) { std::cout << "Woof\n"; }
+void dog_move(void* self)  { std::cout << "Dog runs\n"; }
+void cat_speak(void* self) { std::cout << "Meow\n"; }
+void cat_move(void* self)  { std::cout << "Cat sneaks\n"; }
+```
+
+`self` is the object pointer — unused when the object has no data, but needed when you want to access member fields (equivalent to `this`).
+
+**3. One vtable instance per type**
+```cpp
+VTable dog_vtable = {dog_speak, dog_move};
+VTable cat_vtable = {cat_speak, cat_move};
+```
+
+`dog_speak` here is the **address of the function** — function names decay to pointers automatically (same as array names decaying to pointers).
+
+**4. Object holds a vptr**
+```cpp
+struct Animal {
+    VTable* vptr;  // this is what the compiler secretly adds
+};
+
+Animal dog{&dog_vtable};
+Animal cat{&cat_vtable};
+```
+
+**5. Virtual call = follow vptr**
+```cpp
+dog.vptr->speak(&dog);  // → dog_vtable → dog_speak → "Woof"
+cat.vptr->speak(&cat);  // → cat_vtable → cat_speak → "Meow"
+```
+
+**When `self` is used — object with data:**
+```cpp
+struct Animal {
+    VTable* vptr;
+    std::string name;
+};
+
+void dog_speak(void* self) {
+    Animal* a = static_cast<Animal*>(self);
+    std::cout << a->name << " says Woof\n";
+}
+```
 
 ---
 

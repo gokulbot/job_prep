@@ -22,7 +22,7 @@
 | 5 | Longest Palindromic Substring | Two Pointers |
 | 11 | Container With Most Water | Two Pointers |
 | ~~15~~ | ~~3Sum~~ ✅ | Two Pointers |
-| 16 | 3Sum Closest | Two Pointers |
+| ~~16~~ | ~~3Sum Closest~~ ✅ | Two Pointers |
 | 17 | Letter Combinations of a Phone Number | Backtracking |
 | 19 | Remove Nth Node From End of List | Linked List |
 | 22 | Generate Parentheses | Backtracking |
@@ -33,7 +33,7 @@
 | 47 | Permutations II | Backtracking |
 | 49 | Group Anagrams | Misc |
 | 45 | Jump Game II | DP |
-| 55 | Jump Game | DP |
+| ~~55~~ | ~~Jump Game~~ ✅ | DP |
 | 56 | Merge Intervals | Intervals |
 | 57 | Insert Interval | Intervals |
 | 61 | Rotate List | Linked List |
@@ -42,7 +42,7 @@
 | 77 | Combinations | Backtracking |
 | 79 | Word Search | Misc |
 | 90 | Subsets II | Backtracking |
-| 74 | Search a 2D Matrix | Misc |
+| ~~74~~ | ~~Search a 2D Matrix~~ ✅ | Misc |
 | 91 | Decode Ways | DP |
 | 92 | Reverse Linked List II | Linked List |
 | 98 | Validate Binary Search Tree | Trees |
@@ -82,7 +82,7 @@
 | 320 | Generalized Abbreviation | DP |
 | 323 | Number of Connected Components | Graphs |
 | 328 | Odd Even Linked List | Linked List |
-| 347 | Top K Frequent Elements | Heap |
+| ~~347~~ | ~~Top K Frequent Elements~~ ✅ | Heap |
 | 371 | Sum of Two Integers | Misc |
 | 373 | Find K Pairs with Smallest Sums | Heap |
 | 377 | Combination Sum IV | DP |

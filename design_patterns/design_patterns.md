@@ -14,28 +14,28 @@ How would you design a factory method to dynamically create different sensor pro
 
 ---
 
-### Day 3 — Apr 5 | Abstract Factory
+### Day 3 — Apr 5 | Abstract Factory ✅
 **Design Pattern:** Abstract Factory — families of related objects, swappable factories  
 **SLAM Question:**  
 How would you implement an abstract factory to switch between different SLAM backends (e.g., ORB-SLAM vs RTAB-Map), each requiring its own feature extractor, matcher, and optimizer?
 
 ---
 
-### Day 4 — Apr 6 | Builder
+### Day 4 — Apr 6 | Builder ✅
 **Design Pattern:** Builder — step-by-step construction, fluent interface, director class  
 **SLAM Question:**  
 How would you use the Builder pattern to construct configurable SLAM pipelines (e.g., lightweight vs high-accuracy) step by step?
 
 ---
 
-### Day 5 — Apr 7 | Prototype
+### Day 5 — Apr 7 | Prototype ✅
 **Design Pattern:** Prototype — clone interface, deep vs shallow copy, registry  
 **SLAM Question:**  
 How would you use the Prototype pattern to efficiently clone SLAM keyframes while handling deep vs shallow copies?
 
 ---
 
-### Day 6 — Apr 8 | Adapter
+### Day 6 — Apr 8 | Adapter ✅
 **Design Pattern:** Adapter — class adapter vs object adapter, legacy interface wrapping  
 **SLAM Question:**  
 How would you use the Adapter pattern to integrate a legacy GPS module with a different interface into your SLAM sensor framework?

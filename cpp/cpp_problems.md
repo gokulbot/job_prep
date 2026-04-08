@@ -29,16 +29,16 @@
 ---
 
 ### Day 5 — Apr 7
-1. Write a class with Rule of 5: copy ctor, copy assign, move ctor, move assign, destructor
-2. Prove move is called (not copy) when returning a local object from a function
-3. Implement `std::swap` for your class using move semantics
+1. ✅ Write a class with Rule of 5: copy ctor, copy assign, move ctor, move assign, destructor
+2. ✅ Prove move is called (not copy) when returning a local object from a function
+3. ✅ Implement `std::swap` for your class using move semantics
 
 ---
 
 ### Day 6 — Apr 8
-1. Write a base class with a virtual function; derive two classes — call via base pointer
-2. Add a pure virtual function; make the base abstract; verify you can't instantiate it
-3. Implement a vtable manually using function pointers in a struct
+1. ✅ Write a base class with a virtual function; derive two classes — call via base pointer
+2. ✅ Add a pure virtual function; make the base abstract; verify you can't instantiate it
+3. ✅ Implement a vtable manually using function pointers in a struct
 
 ---
 
