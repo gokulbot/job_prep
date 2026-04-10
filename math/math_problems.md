@@ -1579,36 +1579,26 @@ Derive that this is equivalent to a truncated Gaussian scoring, automatically ad
 
 ---
 
-## M33 — Find 3×3 Matrix A Such That Ax = [2,1,2]ᵀ
+## M33 — Find 3×3 Matrix A Such That Ax lies on line span{[2,1,2]} for all x
 
 ### Problem Statement
-Find a $3\times3$ matrix $A$ such that $A\mathbf{x} = \mathbf{b}$ where $\mathbf{b} = [2,1,2]^\top$. Both $A$ and $\mathbf{x}$ are unknown — this is far more underdetermined than the standard $A\mathbf{x}=\mathbf{b}$ problem. Enumerate solution families, find the minimum-norm solution, and connect to subspace theory.
+Find a $3\times3$ matrix $A$ such that $A\mathbf{x}$ always lies on the line $\text{span}\{[2,1,2]^\top\}$ for all $\mathbf{x} \in \mathbb{R}^3$. This means the column space of $A$ must equal $\text{span}\{[2,1,2]^\top\}$.
 
-### Tasks
+### Solution
 
-1. **Count degrees of freedom** — $A \in \mathbb{R}^{3\times3}$ has 9 unknowns, $\mathbf{x} \in \mathbb{R}^3$ has 3 unknowns = 12 total. $A\mathbf{x}=\mathbf{b}$ gives 3 scalar equations. DOF = **9 free parameters**. Infinitely many solutions.
+$A$ must be a **rank-1 matrix** with all columns proportional to $\mathbf{b} = [2,1,2]^\top$.
 
-2. **Simplest: $A = I$** — $\mathbf{x} = \mathbf{b} = [2,1,2]^\top$. Verify directly.
+General form via outer product:
+$$A = \mathbf{b}\mathbf{c}^\top = [2,1,2]^\top [c_1, c_2, c_3]$$
+for any nonzero $\mathbf{c} = [c_1, c_2, c_3]^\top$.
 
-3. **Diagonal solution** — Find $a,b,c,x_1,x_2,x_3$ such that $ax_1=2$, $bx_2=1$, $cx_3=2$. Each equation has 1 free parameter. One explicit solution:
-$$A = \begin{bmatrix}1&0&0\\0&1&0\\0&0&2\end{bmatrix}, \quad \mathbf{x}=\begin{bmatrix}2\\1\\1\end{bmatrix}$$
-
-4. **Rank-1 solution (outer product)** — Fix $\mathbf{x} = [1,0,0]^\top$. Then $A$'s first column must equal $\mathbf{b}$; remaining columns are free. Minimum-norm choice: $A = \mathbf{b}\mathbf{x}^\top$:
+Simplest example ($\mathbf{c} = [1,0,0]^\top$):
 $$A = \begin{bmatrix}2&0&0\\1&0&0\\2&0&0\end{bmatrix}$$
-Generalize: for any nonzero $\mathbf{x}$, the minimum-norm $A$ given that $\mathbf{x}$ is:
-$$A = \frac{\mathbf{b}\mathbf{x}^\top}{\|\mathbf{x}\|^2}$$
-Verify: $A\mathbf{x} = \mathbf{b}\mathbf{x}^\top\mathbf{x}/\|\mathbf{x}\|^2 = \mathbf{b}$. ✓
 
-5. **Global minimum Frobenius norm** — Over all $(A, \mathbf{x})$ with $\|\mathbf{x}\|=1$: $\|A\|_F = \|\mathbf{b}\mathbf{x}^\top\|_F = \|\mathbf{b}\|\|\mathbf{x}\| = 3$. Prove no $A$ satisfying the constraint can have $\|A\|_F < \|\mathbf{b}\|$ using the operator norm inequality $\|A\mathbf{x}\| \leq \|A\|_F\|\mathbf{x}\|$.
+Then for any $\mathbf{x} = [x_1, x_2, x_3]^\top$:
+$$A\mathbf{x} = x_1 \cdot [2,1,2]^\top$$
 
-6. **Column space interpretation** — $A\mathbf{x}=\mathbf{b}$ requires $\mathbf{b} \in \mathcal{C}(A)$. Any invertible $A$ trivially satisfies this (its column space is all of $\mathbb{R}^3$). The rank-1 solution is the extreme case: $\mathcal{C}(A) = \text{span}\{\mathbf{b}\}$.
-
-7. **Rotation matrix solution** — Can $A \in SO(3)$? Since rotations preserve norms: $\|\mathbf{x}\| = \|A\mathbf{x}\| = \|\mathbf{b}\| = 3$. So $\mathbf{x}$ must have norm 3. Find any unit vectors $\hat{\mathbf{x}}, \hat{\mathbf{b}}$ and construct $R$ rotating $\hat{\mathbf{x}} \to \hat{\mathbf{b}}$ via Rodrigues' formula. Then $\mathbf{x} = 3\hat{\mathbf{x}}$.
-
-8. **This is a bilinear problem** — Linear in $A$ alone or $\mathbf{x}$ alone, nonlinear in both. Appears in:
-   - **Blind deconvolution**: recover filter $A$ and signal $\mathbf{x}$ from output $\mathbf{b}$
-   - **Dictionary learning**: find $A$ (dictionary) and sparse $\mathbf{x}$ (code) for observation $\mathbf{b}$
-   - **SLAM self-calibration**: jointly estimate intrinsics $K$ and 3D structure $\mathbf{P}$
+Always on the line. Column space = $\text{span}\{[2,1,2]^\top\}$. Rank = 1.
 
 ---
 
@@ -2074,10 +2064,10 @@ Used in RANSAC (M31) to classify inliers when estimating $F$ or $E$.
 
 | ID | Topic | Added | Done |
 |----|-------|-------|------|
-| M1 | Kalman Filter — position/velocity state derivation | Apr 3 | [ ] |
-| M2 | Inverse depth distribution — Gaussian depth → reciprocal normal | Apr 3 | [ ] |
+| M1 | Kalman Filter — position/velocity state derivation | Apr 3 | [x] |
+| M2 | Inverse depth distribution — Gaussian depth → reciprocal normal | Apr 3 | [x] |
 | M3 | IMU → Camera pose & covariance propagation | Apr 3 | [ ] |
-| M4 | Pinhole camera projection equation — geometric derivation to full pipeline | Apr 3 | [ ] |
+| M4 | Pinhole camera projection equation — geometric derivation to full pipeline | Apr 3 | [x] |
 | M5 | Camera distortion — full model, pipeline order, and Jacobian derivation | Apr 3 | [ ] |
 | M6 | Kalman Filter vs nonlinear optimization — MAP root, EKF, factor graphs, sliding window | Apr 3 | [ ] |
 | M7 | Gauss-Newton vs LM vs Dogleg — derivations, trust regions, failure modes, comparison | Apr 3 | [ ] |
@@ -2103,10 +2093,10 @@ Used in RANSAC (M31) to classify inliers when estimating $F$ or $E$.
 | M27 | IMU preintegration — derivation, noise model, covariance propagation, bias correction | Apr 3 | [ ] |
 | M28 | GRU/RNN as IMU integrator — architecture, training, why it beats classical ARK4 | Apr 3 | [ ] |
 | M29 | SVD — derivation, geometric meaning, how VINS-Fusion uses it to initialize depth | Apr 3 | [ ] |
-| M30 | Solving Ax=b — column/row/null spaces, homogeneous vs inhomogeneous, least squares | Apr 3 | [ ] |
+| M30 | Solving Ax=b — column/row/null spaces, homogeneous vs inhomogeneous, least squares | Apr 3 | [x] |
 | M31 | RANSAC — derivation, sample count formula, variants (MSAC, PROSAC, MAGSAC) | Apr 3 | [ ] |
 | M32 | Log-normal distribution — if Y~Gaussian, derive distribution of e^Y, moments, uses | Apr 3 | [ ] |
-| M33 | Find 3×3 matrix A such that Ax = [2,1,2]^T — underdetermination, solution families, min-norm | Apr 3 | [ ] |
+| M33 | Find 3×3 matrix A such that Ax lies on line span{[2,1,2]} for all x — rank-1, outer product | Apr 3 | [x] |
 | M34 | Normal vs Gaussian distribution — are they the same? etymology, multivariate, CLT | Apr 3 | [ ] |
 | M35 | Distribution of min(X,Y) when X,Y ~ Gaussian — order statistics, CDF derivation | Apr 3 | [ ] |
 | M36 | Noodle loop probability — one big loop from n strands, recursive + step-by-step derivation | Apr 3 | [ ] |
