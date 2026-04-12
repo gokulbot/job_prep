@@ -1368,3 +1368,114 @@ std::cout << *p << "\n";   // 42
 
 **Why it's a function, not a class:** it just allocates and wraps — no state needed.
 **Why use it over `new` directly:** safer — if an exception is thrown, the `unique_ptr` still cleans up. Raw `new` in complex expressions can leak.
+
+---
+
+## C++20 Concepts
+
+### What are concepts?
+
+A way to put **compile-time constraints on template parameters**. Instead of "T can be anything", you say "T must have these specific methods with these specific signatures".
+
+**Before concepts (C++17):**
+```cpp
+template <typename T>
+class CentralFactorGraph {
+    // T could be literally anything
+    // If T doesn't have addFactors(), you get a wall of cryptic template errors
+};
+```
+
+**With concepts (C++20):**
+```cpp
+template <typename T>
+concept FactorModule = requires(T m, ...) {
+    { m.connect(bus)    } -> std::convertible_to<bool>;
+    { m.addFactors(...) } -> std::same_as<void>;
+};
+
+template <typename T>
+    requires FactorModule<T>
+class CentralFactorGraph {
+    // Clear error if T doesn't satisfy FactorModule
+};
+```
+
+Three things concepts give you:
+1. **Clear error messages** — "T does not satisfy FactorModule — missing addFactors()" instead of 50 lines of template gibberish
+2. **Self-documenting code** — the concept IS the contract, readable as a spec
+3. **No runtime cost** — all checked at compile time, zero overhead
+
+Similar to interfaces in Java / Python ABCs but enforced at compile time and works with templates.
+
+---
+
+### Anatomy of a concept
+
+```cpp
+template<typename T>
+concept FactorModule = requires(
+    T m,
+    const std::unique_ptr<MeasurementBus>& bus,
+    gtsam::NonlinearFactorGraph& graph,
+    gtsam::Values& values,
+    uint64_t key,
+    double ts,
+    const gtsam::Values& result,
+    bool is_reset)
+{
+    { m.connect(bus)                        } -> std::convertible_to<bool>;
+    { m.initialize(graph, values, is_reset) } -> std::same_as<void>;
+    { m.addFactors(key, ts, graph, values)  } -> std::same_as<void>;
+    { m.postOptimize(key, ts, result)       } -> std::same_as<void>;
+};
+```
+
+**`requires(...) { }`** — the variables declared in the outer `requires(...)` are fake — the compiler never creates them. They exist only so you can write expressions using them. Think of it as a sandbox for type checking.
+
+**`{ expression } -> constraint`** — each line checks two things:
+1. The expression must **compile** (method exists with correct argument types)
+2. The return type must satisfy the constraint
+
+**`std::convertible_to<bool>`** — return type just needs to be truthy (`int`, `bool`, `enum` all work)
+
+**`std::same_as<void>`** — return type must be exactly `void`, stricter than `convertible_to`
+
+---
+
+### Two usages of a concept
+
+```
+FactorModule           ← 1. DEFINE the contract
+      ↓
+requires FactorModule<Driver>   ← 2. ENFORCE the contract on a template parameter
+      ↓
+class CentralFactorGraph        ← only instantiated if constraint passes
+```
+
+Same concept, two usages — define once, enforce anywhere.
+
+---
+
+### Concepts over concepts (variadic)
+
+```cpp
+template <typename Driver, typename HighFreqSource, typename... Constraints>
+    requires FactorModule<Driver> &&
+             FactorModule<HighFreqSource> &&
+             (FactorModule<Constraints> && ...)
+class CentralFactorGraph { ... };
+```
+
+`typename... Constraints` is a variadic pack — zero or more types.
+
+`(FactorModule<Constraints> && ...)` is a **fold expression** — the `...` tells the compiler to expand the pack and insert `&&` between each one.
+
+If `Constraints = GPSConstraint, WheelOdometryFactor, LiDARConstraint`, it expands to:
+```cpp
+(FactorModule<GPSConstraint> && FactorModule<WheelOdometryFactor> && FactorModule<LiDARConstraint>)
+```
+
+If the pack is empty, the fold over `&&` evaluates to `true` by default.
+
+The `requires` clause sits on top of the class like a gate — checked before the compiler even looks inside the class body. If any type fails, you get a clear error at the instantiation site, not buried in the implementation.
