@@ -1479,3 +1479,45 @@ If `Constraints = GPSConstraint, WheelOdometryFactor, LiDARConstraint`, it expan
 If the pack is empty, the fold over `&&` evaluates to `true` by default.
 
 The `requires` clause sits on top of the class like a gate — checked before the compiler even looks inside the class body. If any type fails, you get a clear error at the instantiation site, not buried in the implementation.
+
+---
+
+## Forwarding References (Universal References)
+
+### The rule
+
+`T&&` on a **template parameter** is a forwarding reference — NOT an rvalue reference:
+
+```cpp
+template <typename Func>
+void forEachModule(Func&& func)   // ← forwarding reference
+
+void foo(std::string&& s)         // ← rvalue reference (no template)
+```
+
+The `typename Func` template parameter is what makes it a forwarding reference.
+
+### What it means
+
+It binds to anything — lvalue, rvalue, const, non-const:
+
+```cpp
+forEachModule(my_lambda);                     // lvalue ✓
+forEachModule([&](auto& m){ m.connect(); });  // temporary lambda ✓
+forEachModule(std::move(my_lambda));          // rvalue ✓
+```
+
+- `Func&`  — rejects temporaries
+- `Func&&` on concrete type — rejects lvalues
+- `Func&&` on template parameter — accepts everything
+
+### Why use it
+
+It's the idiomatic C++ way to say "pass me any callable — a lambda, a function pointer, a functor — I'll take it without copying unnecessarily".
+
+### Short version
+
+```
+T&&  on a template parameter = forwarding reference = accepts everything
+T&&  on a concrete type      = rvalue reference     = accepts only temporaries
+```
