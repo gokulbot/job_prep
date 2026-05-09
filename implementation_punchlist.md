@@ -51,18 +51,20 @@
 
 ### Fri (LC mediums)
 - [x] **#21 LC 48** ⭐ Rotate Image (image-flavored, top Qualcomm freq) ✅
-- [ ] **#22 LC 56** Merge Intervals
-- [ ] **#23 LC 3** Longest Substring Without Repeating
-- [ ] **#24 LC 215** Kth Largest Element
-- [ ] **#25 LC 8** String to Integer (atoi)
-- [ ] **#26 LC 836** Rectangle Overlap
+- [x] **#22 LC 56** Merge Intervals ✅
+- [x] **#23 LC 3** Longest Substring Without Repeating ✅
+- [x] **#24 LC 215** Kth Largest Element ✅
+- [x] **#26 LC 836** Rectangle Overlap ✅
 
 ### Sat
-- [ ] **#27 LC 102** Level Order Traversal
-- [ ] **#28 LC 235** LCA of BST
-- [ ] **#29 LC 236** LCA of Binary Tree
-- [ ] **#30 LC 146** LRU Cache
-- [ ] **#31 LC 200** Number of Islands
+- [x] **#27 LC 102** Level Order Traversal ✅
+- [~] **#31 LC 200** Number of Islands — skipped
+
+### Array set (Sat)
+- [x] **#32 LC 88** Merge Sorted Array ✅
+- [x] **#33 LC 238** Product of Array Except Self ✅
+- [x] **#34 LC 189** Rotate Array ✅
+- [x] **#35 LC 33** Search in Rotated Sorted Array ✅
 
 ---
 

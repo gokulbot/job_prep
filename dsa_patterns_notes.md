@@ -727,3 +727,856 @@ Camera sensors are sometimes mounted at non-standard orientations (90° / 180° 
 
 > **Transpose + reverse one axis = 90° rotation. Two reverses = 180°. The axis you reverse picks CW vs CCW.**
 
+---
+
+## 9. Interval Merge — LC 56 (Sort + Sweep)
+
+### The pattern
+
+Two-step recipe that handles every interval-merge problem:
+
+1. **Sort by start time** — `O(N log N)`. After sorting, any two overlapping intervals are adjacent.
+2. **Sweep linearly** — for each new interval:
+   - **Extend** the last result interval if it overlaps (`new.start <= last.end`)
+   - **Append** as a new interval otherwise
+
+```cpp
+vector<vector<int>> merge(vector<vector<int>>& intervals) {
+    sort(intervals.begin(), intervals.end());
+    vector<vector<int>> result;
+    for (auto& iv : intervals) {
+        if (!result.empty() && iv[0] <= result.back()[1]) {
+            result.back()[1] = std::max(iv[1], result.back()[1]);
+        } else {
+            result.push_back(iv);
+        }
+    }
+    return result;
+}
+```
+
+**O(N log N) time, O(N) space (output).**
+
+### Why sorting unlocks the linear sweep
+
+Without sort, every pair must be compared → `O(N²)`. After sorting by start:
+- If `new.start > last.end` → no overlap. **And** no earlier interval can overlap either (they all started even earlier and were already merged into `last`).
+- If `new.start <= last.end` → overlap.
+
+Sorting by start is the key invariant that lets you forget everything except `result.back()`.
+
+### The bug-magnet: fully-contained intervals
+
+```
+[[1,10], [2,3]]  →  must merge to [1,10], NOT [1,3]
+```
+
+If you naively write `result.back()[1] = iv[1]` you destroy the wider end. **Always `max(last.end, new.end)`** when merging — the new interval might be entirely swallowed.
+
+### Touching vs strictly overlapping
+
+LC 56 counts touching intervals (`[1,4]` and `[4,5]`) as overlap → use `<=` not `<`.
+
+If the problem says "intervals are open at the right endpoint" or "strictly overlapping" → use `<`. **Read the spec carefully.**
+
+### Mental model
+
+> **"Sort by start. Walk the sorted list. For each new interval, either extend the current run or start a new one. Always take max of ends when extending."**
+
+### Why this matters for hardware / image processing
+
+Same pattern shows up in:
+- **DMA descriptor coalescing**: merging contiguous memory regions before issuing transfers (fewer descriptors → less overhead)
+- **Dirty-region tracking** in framebuffers: an ISP often tracks which scanlines changed; merging adjacent dirty intervals before re-rendering
+- **Time-window aggregation**: sensor frames within a time window get merged for processing
+
+### Common bugs
+
+- **Forgetting `max` on the merged end** — fully-contained intervals lose their wider extent
+- **Using `<` instead of `<=`** — fails on touching intervals (LC 56 spec)
+- **`emplace_back(intervals[i])`** — works but is misleading; `push_back` is the right verb when the argument is already the right type. `emplace_back` shines when constructing in place: `emplace_back(start, end)`.
+- **Signed/unsigned mismatch** with `int i` and `.size()` — prefer range-for or `size_t i`
+- **Forgetting to sort** — without sort, the sweep silently produces wrong answers on unsorted input
+
+### Where this pattern generalizes
+
+| Problem | Twist |
+|---|---|
+| LC 56 Merge Intervals | Vanilla sort + sweep |
+| LC 57 Insert Interval | Pre-sorted input + insertion point |
+| LC 252 Meeting Rooms | Detect any overlap (don't merge) |
+| LC 253 Meeting Rooms II | Count max concurrent intervals (heap of ends, or sweep-line +1/-1) |
+| LC 435 Non-overlapping Intervals | Sort by **end** for greedy interval scheduling |
+| LC 1288 Remove Covered Intervals | Sort by start asc, end desc; sweep |
+
+**The variant that trips most people**: LC 435 sorts by **end**, not start. Sorting by start is right for "merge what overlaps"; sorting by end is right for "keep as many non-overlapping as possible."
+
+### Memorization aid
+
+> **"Sort by start. Sweep. Extend with max-of-ends or append."**
+
+---
+
+## 10. Rectangle Overlap — LC 836 (Separating Axis, 2D)
+
+### The pattern
+
+Two axis-aligned rectangles overlap iff they overlap on **both** the x-axis AND the y-axis projection. The 2D problem reduces to **two independent 1D interval-overlap checks**.
+
+```cpp
+bool isRectangleOverlap(vector<int>& rec1, vector<int>& rec2) {
+    bool x_overlap = std::max(rec1[0], rec2[0]) < std::min(rec1[2], rec2[2]);
+    bool y_overlap = std::max(rec1[1], rec2[1]) < std::min(rec1[3], rec2[3]);
+    return x_overlap && y_overlap;
+}
+```
+
+**O(1) time, O(1) space.**
+
+### The 1D primitive
+
+Two intervals `[a, b]` and `[c, d]` overlap with positive length iff:
+
+```
+max(a, c) < min(b, d)
+```
+
+- `<` (strict) → "touching doesn't count" (LC 836 spec)
+- `<=` → "touching counts as overlap" (LC 56 spec)
+
+**Read the problem statement** to know which to use.
+
+### Why the formula works
+
+Visualize the two intervals on a number line:
+- `max(left edges)` = the rightmost left edge → "where the overlap region starts"
+- `min(right edges)` = the leftmost right edge → "where the overlap region ends"
+
+If start < end, there's positive overlap. If start ≥ end, the "overlap region" is empty or inverted (no overlap).
+
+### Equivalent: separation theorem (negation form)
+
+```cpp
+return !(rec1[2] <= rec2[0] ||   // rec1 fully left of rec2
+         rec2[2] <= rec1[0] ||   // rec2 fully left of rec1
+         rec1[3] <= rec2[1] ||   // rec1 fully below rec2
+         rec2[3] <= rec1[1]);    // rec2 fully below rec1
+```
+
+This is the **Separating Axis Theorem (SAT)** in its simplest form: two convex shapes don't overlap iff there exists an axis along which their projections are disjoint. For axis-aligned rectangles, the only candidate axes are x and y.
+
+For arbitrary convex polygons, you'd test against all face normals — same idea, more axes.
+
+### Why this matters for hardware / CV
+
+- **Bounding-box collision** in physics engines and game loops (axis-aligned phase before tighter checks)
+- **IoU (Intersection over Union)** in object detection: numerator is the rectangle overlap area, denominator is union — same overlap-region computation drives modern detectors
+- **Tile/clipping in graphics pipelines**: which framebuffer tiles intersect a draw call's bounding box?
+- **Dirty-rectangle tracking** in display compositors: which screen regions need redraw?
+
+### Tying it back to LC 56
+
+LC 56 was 1D interval merging with sort + sweep.
+LC 836 is 1D interval overlap, **applied twice (x and y)**.
+
+The 1D primitive `max(starts) < min(ends)` (or `<=`) is the building block. Recognizing it across problems is the senior signal.
+
+### Common bugs
+
+- **Wrong inequality** (`<=` when problem says touching doesn't count, or vice-versa)
+- **Confusing the rect format** — LC 836 uses `[x1, y1, x2, y2]` with `(x1,y1)` bottom-left. Some problems use `[x, y, w, h]` (origin + width/height) — read carefully.
+- **Treating it as a 2D geometric mess** instead of recognizing two 1D problems
+
+### Memorization aid
+
+> **"Two rectangles overlap iff their x-projections overlap AND their y-projections overlap. Each is a 1D max-of-starts < min-of-ends check."**
+
+---
+
+## 11. Sliding Window with Set — LC 3 (Longest Substring Without Repeating)
+
+### The pattern
+
+Maintain a window `[left, right)` over the string with the invariant **all characters inside are unique**. When a duplicate would enter, slide `left` forward (erasing characters along the way) until the duplicate is gone. Then add the new character.
+
+```cpp
+int lengthOfLongestSubstring(string s) {
+    std::unordered_set<char> seen;
+    size_t i = 0, j = 0;
+    size_t max_len = 0;
+
+    while (j < s.size()) {
+        // Slide left until s[j] is no longer a duplicate
+        while (seen.find(s[j]) != seen.end() && i < j) {
+            seen.erase(s[i]);
+            i++;
+        }
+        seen.insert(s[j]);
+        j++;
+        max_len = std::max(seen.size(), max_len);
+    }
+    return (int)max_len;
+}
+```
+
+**O(n) time, O(min(n, σ)) space** where σ = alphabet size.
+
+### The invariant (load-bearing)
+
+After the outer body completes, `seen == {s[i], s[i+1], ..., s[j-1]}`. Every operation preserves this:
+- Erase from front when sliding `i` → maintains lower bound
+- Insert `s[j]` then increment `j` → maintains upper bound
+
+### Why amortized O(n)
+
+Both pointers are **monotonic** — they only advance, never reset. `i` and `j` each cross the string at most once, so total inner-loop work is ≤ 2n across all outer iterations.
+
+The naïve "reset on collision" alternative is O(n²) because each collision throws away progress. **Sliding > resetting** is the whole insight.
+
+### The bug-magnet: variable shadowing
+
+`unordered_set<char> s` clashes with the input `string s`. Always rename the set (e.g., `seen`). Same lesson applies to any helper container — don't reuse the parameter's name.
+
+### The other bug-magnet: `find` vs end
+
+`unordered_set::find` returns an **iterator**, not a count. Compare to `.end()`, never to `0`:
+- "in set" → `seen.find(c) != seen.end()`
+- "not in set" → `seen.find(c) == seen.end()`
+
+### When the inner-loop guard `i < j` matters
+
+If you ever reach `i == j`, the window is empty, so any duplicate of `s[j]` must be impossible — the guard is technically unreachable in correct code. But it's a cheap defensive check that prevents pathological infinite loops if the invariant ever breaks (e.g., from a future refactor).
+
+### Variant: last-seen-index map (faster constant factor)
+
+Replace the inner erase loop with a direct `left` jump:
+
+```cpp
+int lengthOfLongestSubstring(string s) {
+    std::unordered_map<char, int> last;
+    int left = 0, max_len = 0;
+    for (int right = 0; right < (int)s.size(); right++) {
+        auto it = last.find(s[right]);
+        if (it != last.end() && it->second >= left) {
+            left = it->second + 1;   // jump past prior occurrence
+        }
+        last[s[right]] = right;
+        max_len = std::max(max_len, right - left + 1);
+    }
+    return max_len;
+}
+```
+
+`left` jumps directly past the prior occurrence (still monotonic — only advances). Same O(n), fewer hash ops in the worst case.
+
+The set version is more general (no need to track positions); the map version is faster when you have positional info.
+
+### Why this matters for hardware / signal processing
+
+Sliding window over time-series data is the basis for:
+- **Moving averages / sliding median** in image and audio filters
+- **Frame-to-frame deduplication** in video pipelines
+- **Burst detection** in sensor streams (max activity in any K-frame window)
+- **Cache eviction** in LRU implementations (window of recently-accessed keys)
+
+The "two pointers, both monotonic" structure is the same machinery in all of them.
+
+### Where this pattern generalizes
+
+| Problem | Twist |
+|---|---|
+| LC 3 | Longest window with unique chars |
+| LC 76 Min Window Substring | Smallest window containing all chars of `t` (need + count) |
+| LC 209 Min Subarray Sum ≥ k | Smallest window with sum ≥ k |
+| LC 438 All Anagrams of `p` | Fixed-size window, hashmap match |
+| LC 567 Permutation in String | Fixed-size window, character-frequency match |
+| LC 904 Fruit Into Baskets | Longest window with at most 2 distinct values |
+
+**The structural distinction**: "longest window with property X" vs "shortest window with property X" — same two-pointer skeleton, different update rules.
+
+### Common bugs
+
+- **Variable shadowing**: same name for input string and the helper container
+- **`find != 0`**: comparing iterator to int instead of `.end()`
+- **Resetting the window** (`set.clear()`) on collision instead of sliding `left` — turns it into O(n²) and produces wrong answers (e.g., `"dvdf"` returns 2 instead of 3)
+- **Off-by-one on window size**: `right - left + 1` for `[left, right]` inclusive; or `seen.size()` if maintaining a set
+- **Signed/unsigned mismatch** in `max(set.size(), int_var)` — both args must be the same type
+
+### Memorization aid
+
+> **"Two pointers, both monotonic. Right adds, left erases on collision. Window size is `right - left + 1` or `set.size()`."**
+
+---
+
+## 12. Top-K via Size-K Heap — LC 215 (Heap Inversion Trick)
+
+### The pattern
+
+For the K-th largest element: maintain a **min-heap of size K**. Each time the heap exceeds size K, pop the smallest. After processing all elements, the heap's top is the K-th largest.
+
+```cpp
+int findKthLargest(vector<int>& nums, int k) {
+    std::priority_queue<int, vector<int>, greater<int>> q;   // min-heap
+    for (int x : nums) {
+        q.push(x);
+        if ((int)q.size() > k) q.pop();
+    }
+    return q.top();
+}
+```
+
+**O(n log k) time, O(k) space.**
+
+### The inversion trick (counterintuitive, load-bearing)
+
+| Want | Heap type | Why |
+|---|---|---|
+| **K-th largest** | **min-heap** of size K | Top = smallest of the K biggest = the K-th biggest overall |
+| **K-th smallest** | **max-heap** of size K | Top = largest of the K smallest = the K-th smallest overall |
+
+Beginners reach for a max-heap to find "the largest." Correct for one element. **For top-K with a size-K bounded heap, you want the *opposite* — a min-heap so the weakest of your survivors sits at the top, ready to be evicted when something better shows up.**
+
+### Why bounded-heap, not full-heap
+
+Three approaches with their trade-offs:
+
+| Approach | Time | Space | Note |
+|---|---|---|---|
+| Sort + index `nums[n-k]` | O(n log n) | O(1) extra | One-line fallback, works |
+| Max-heap of all + pop k-1 | O(n + k log n) | O(n) | Build heap once, pop k-1 |
+| **Size-K min-heap** | **O(n log k)** | **O(k)** | Canonical top-K pattern |
+| Quickselect | O(n) avg, O(n²) worst | O(1) | Optimal asymptote, bug-prone |
+
+**Why size-K wins for streaming**: when n is unknown ahead of time (data arrives online), you can't sort or build a full heap. The size-K bounded heap processes elements one at a time and stays at O(K) memory. Same code works for batch and streaming.
+
+### C++ heap API gotchas
+
+```cpp
+priority_queue<int>                              q1;   // MAX-heap (default)
+priority_queue<int, vector<int>, less<int>>      q2;   // MAX-heap (explicit)
+priority_queue<int, vector<int>, greater<int>>   q3;   // MIN-heap
+```
+
+The third template arg is the **comparator**. The comparator is the *opposite* of what's at the top:
+- `less<>` (a < b) → max at top
+- `greater<>` (a > b) → min at top
+
+Operations:
+- `q.top()` — access (NOT `q.front()`; that's `std::queue`'s API)
+- `q.push(x)` — insert
+- `q.pop()` — remove top
+- `q.size()`, `q.empty()` — usual
+
+**Constructor speedup**: passing a range to the constructor builds the heap in O(n) instead of O(n log n) sequential pushes:
+```cpp
+priority_queue<int> q(nums.begin(), nums.end());   // O(n) heapify
+```
+
+### Mental model
+
+> **"Min-heap surfaces the loser. Max-heap surfaces the champion. To track top-K, use a min-heap so the weakest of your survivors is at the top — ready to be evicted when something better arrives."**
+
+### Common bugs
+
+- **Wrong heap direction**: max-heap-of-size-k for "k-th largest" — gives k-th smallest instead. Single most common bug on this problem.
+- **`q.front()` vs `q.top()`**: `priority_queue` doesn't have `front`. That's `queue`'s API.
+- **Off-by-one on K**: `k=1` means the largest, not second largest. The heap top is the answer when heap size == k.
+- **Default comparator confusion**: `priority_queue<int>` is max-heap; `set<int>` is sorted asc. Different defaults. Don't assume.
+- **Signed/unsigned**: `q.size()` is `size_t`, `k` is `int`. Cast one or compiler may warn.
+
+### Where this pattern generalizes
+
+| Problem | Heap setup |
+|---|---|
+| LC 215 K-th Largest | Size-K min-heap |
+| LC 703 K-th Largest in Stream | Same — size-K min-heap, persists across calls |
+| LC 347 Top K Frequent | Size-K min-heap on (freq, val) pairs |
+| LC 692 Top K Frequent Words | Size-K min-heap with custom comparator |
+| LC 973 K Closest Points to Origin | Size-K **max**-heap on distance (we want K **smallest** distances) |
+| LC 295 Median from Data Stream | Two heaps — max-heap for lower half, min-heap for upper half |
+| LC 23 Merge K Sorted Lists | Min-heap of list heads (top = next element to emit) |
+
+**LC 973 is the "max-heap for K-smallest" mirror image** — useful sanity check that you've internalized the inversion rule.
+
+### Why this matters for hardware / streaming
+
+Size-K bounded heaps appear in:
+- **Top-K monitoring** in observability pipelines (top 10 slowest queries, top 5 noisiest sensors)
+- **K-NN search** in vector retrieval (heap of K nearest neighbors as you scan)
+- **Outlier detection** (top K outliers by score)
+- **Embedded / DSP**: bounded-memory algorithms when full-array sort isn't feasible
+
+The key property is **constant memory in K**, regardless of input size — critical for streaming/embedded contexts where you can't buffer the whole input.
+
+### Memorization aid
+
+> **"K-th largest = min-heap of size K. Push, evict if too big. The top is the K-th best because it's the smallest of the K winners."**
+
+---
+
+## 13. Tree Level-Order BFS — LC 102 (Snapshot Trick)
+
+### The pattern
+
+BFS with a queue, but at the start of each level, **snapshot `queue.size()`** to know how many nodes belong to the current level. Process exactly that many — children pushed during the inner loop become next level's snapshot.
+
+```cpp
+vector<vector<int>> levelOrder(TreeNode* root) {
+    vector<vector<int>> result;
+    if (!root) return result;
+
+    queue<TreeNode*> q;
+    q.push(root);
+
+    while (!q.empty()) {
+        int level_size = q.size();             // snapshot BEFORE the inner loop
+        vector<int> level;
+        for (int i = 0; i < level_size; i++) {
+            TreeNode* curr = q.front();
+            q.pop();
+            level.push_back(curr->val);
+            if (curr->left)  q.push(curr->left);
+            if (curr->right) q.push(curr->right);
+        }
+        result.push_back(level);
+    }
+    return result;
+}
+```
+
+**O(n) time, O(w) space** where w = max width of the tree.
+
+### The snapshot trick (load-bearing)
+
+At the moment you snapshot `queue.size()`, the queue contains **exactly the nodes of the current level** — none of their children have been enqueued yet. By processing exactly `level_size` pops, you finish the current level even though the queue grows during the loop.
+
+If you instead checked `q.size()` inside the loop (`while (q.size() > 0)`), you'd never advance levels — the queue keeps being non-empty as children get added.
+
+### The two children → two ifs (not else-if)
+
+```cpp
+if (curr->left)  q.push(curr->left);
+if (curr->right) q.push(curr->right);
+```
+
+A node can have both children. `if/else` would push only one of them — silent data loss. **Two independent ifs.**
+
+### Why this matters
+
+Level-order is the foundation pattern for an entire family of tree problems:
+
+| Problem | Tweak |
+|---|---|
+| LC 102 Level Order | Vanilla — group by level |
+| LC 107 Level Order Bottom-Up | Same code, `std::reverse(result)` at end |
+| LC 199 Right Side View | Last node of each level (when `i == level_size - 1`) |
+| LC 116/117 Next Right Pointers | Connect siblings within a level using prev pointer |
+| LC 103 Zigzag Level Order | Alternate push direction per level (or reverse every other level) |
+| LC 515 Largest Value Each Row | Track max within the level |
+| LC 637 Average of Levels | Track sum / count within the level |
+| LC 314 Vertical Order | BFS keyed by column index instead of level |
+
+Once the BFS-with-snapshot skeleton is muscle memory, all of these become 2-line tweaks.
+
+### Why this matters for hardware / graphs
+
+BFS with level demarcation is **shortest-path in unweighted graphs** — the level number = distance from source in hops. Used in:
+- Image flood-fill / connected components by distance
+- Network broadcast (which nodes are reachable in K hops)
+- ISP pipeline scheduling (what stages run in parallel at each "depth")
+- Game AI pathfinding (BFS for unit moves on a grid)
+
+### Common bugs
+
+- **No null check on root** → enqueueing `nullptr` then `nullptr->val` segfaults
+- **Re-evaluating `q.size()` inside the for loop** → queue grows as children enqueue, so you never advance levels (or process wrong counts)
+- **`else if` between left and right children** → loses one child when both exist
+- **`q.top()` instead of `q.front()`** → `priority_queue`'s API; `queue` uses `front()`
+- **Missing per-level vector** → flat list output instead of grouped-by-level
+- **Using `stack` instead of `queue`** → DFS order, not BFS
+
+### C++ queue API gotchas
+
+```cpp
+std::queue<T> q;
+q.push(x);        // enqueue
+q.front();        // peek (NOT q.top — that's priority_queue)
+q.pop();          // returns void, doesn't return the popped element
+q.empty();
+q.size();
+```
+
+The `pop()` returns void — read `q.front()` before calling `q.pop()`. (Different from `std::priority_queue` which has the same `pop()` quirk but uses `top()` for peek.)
+
+### Mental model
+
+> **"Snapshot the queue size at the start of each level. Process exactly that many pops. Children enqueued during processing become the next level — they don't contaminate the current count."**
+
+### Memorization aid
+
+> **"BFS with snapshot. Outer loop = levels. Inner loop bounded by `q.size()` snapshot. Two `if`s for children, never `if/else`."**
+
+---
+
+## 14. In-Place Merge from the Back — LC 88
+
+### The pattern
+
+When merging two sorted arrays into one **in place** with trailing slack space at the end of the destination, walk both arrays from the **back**, writing the larger element into the back of the destination. This guarantees the write pointer never overwrites unread data.
+
+```cpp
+void merge(vector<int>& nums1, int m, vector<int>& nums2, int n) {
+    int i = m - 1;          // last valid in nums1
+    int j = n - 1;          // last valid in nums2
+    int k = m + n - 1;       // write position
+
+    while (i >= 0 && j >= 0) {
+        if (nums1[i] > nums2[j]) {
+            nums1[k--] = nums1[i--];
+        } else {
+            nums1[k--] = nums2[j--];
+        }
+    }
+    // Drain any leftover nums2 (nums1 leftovers are already in place)
+    while (j >= 0) {
+        nums1[k--] = nums2[j--];
+    }
+}
+```
+
+**O(m + n) time, O(1) space.**
+
+### The key insight: front-merge fails, back-merge succeeds
+
+Front-merge would overwrite `nums1[0]` with `min(nums1[0], nums2[0])` — but you haven't read all of `nums1` yet. You'd clobber unread data.
+
+Back-merge works because **the free space is at the back of `nums1`**. The write pointer `k` always stays at or ahead of the read pointer `i` (in absolute index terms), so writes never trample unread cells.
+
+### Why nums1 leftovers don't need copying
+
+If `nums2` exhausts first (`j < 0`), the remaining elements of `nums1` are already in their final positions. They're below `k`, untouched, and sorted. **Skip the copy.**
+
+If `nums1` exhausts first (`i < 0`), `nums2` still has its smallest elements waiting — those need to be drained into the front of `nums1`. That's the second `while (j >= 0)` loop.
+
+### Where this trick generalizes
+
+| Problem | Application |
+|---|---|
+| LC 88 | Merge sorted arrays in place |
+| Merge step of merge-sort | When destination buffer is the input + scratch |
+| `memmove` with forward overlap | Direction is back-to-front to avoid clobbering |
+| In-place insertion into sorted array | Shift right side back-to-front to make room |
+| Firmware ring-buffer compaction | Move tail elements forward over consumed slots |
+
+The general lemma: **when source and destination overlap, copy in the direction that keeps reads ahead of writes**. For merge-into-tail, that direction is back-to-front.
+
+### Why this matters for hardware / DMA
+
+- **`memmove` correctness**: `memcpy` is undefined for overlapping regions; `memmove` chooses copy direction based on whether `dst > src` (forward overlap → copy backward) or `dst < src` (backward overlap → copy forward). Same principle as LC 88.
+- **DMA descriptor coalescing** with overlapping regions follows the same direction logic
+- **Image scanline shift** in software pipelines: shifting the entire image left/right uses backward copy when shift > 0
+
+### Common bugs
+
+- **Forgetting nums2 leftover drain** — if `nums2 = [1,2,3]` and `nums1 = [4,5,6,0,0,0]`, the main loop runs 3 times pulling from nums1, leaving nums2 untouched. The drain loop is mandatory.
+- **Trying to drain nums1 leftovers** — wasted work, but not incorrect. Cleaner to skip.
+- **Off-by-one on indices**: `m-1`, `n-1`, `m+n-1` because they're zero-based indices. Confusing `m` (count) with `m-1` (last index) is the most common slip.
+- **Using `<` instead of `>=` in the loop guard** — both pointers must be checked or you'll deref negative indices.
+
+### Mental model
+
+> **"Trailing zeros are scratch space. Walk from the back, write the larger into the back of nums1. Drain nums2 leftovers at the end; nums1 leftovers stay put."**
+
+### Memorization aid
+
+> **"Three pointers from the back: i, j, k. Pick the larger, write to k, advance. Drain nums2 at the end."**
+
+---
+
+## 15. Two-Pass Prefix/Suffix Products — LC 238 (Product of Array Except Self)
+
+### The pattern
+
+For each index `i`, the answer is `(product of everything left of i) × (product of everything right of i)`. Compute both halves in two sweeps, reusing the output array to avoid an extra buffer.
+
+```cpp
+vector<int> productExceptSelf(vector<int>& nums) {
+    int n = nums.size();
+    vector<int> answer(n, 1);
+
+    // Pass 1: answer[i] = product of nums[0..i-1]  (left products)
+    for (int i = 1; i < n; i++) {
+        answer[i] = answer[i-1] * nums[i-1];
+    }
+
+    // Pass 2: multiply in the right products using a scalar
+    int right = 1;
+    for (int i = n - 1; i >= 0; i--) {
+        answer[i] *= right;
+        right *= nums[i];
+    }
+    return answer;
+}
+```
+
+**O(n) time, O(1) extra space** (output not counted).
+
+### Why this is the canonical "no division" answer
+
+The naive solution is `total_product / nums[i]`, which:
+- The problem **forbids division**
+- Breaks for arrays containing zero (division by zero, or wrong handling of "zero in product")
+
+The two-pass approach handles zeros correctly without special-casing — a zero in `nums[k]` means every `answer[i ≠ k]` will pick it up via either the left or right sweep, and `answer[k]` will be the product of everything else.
+
+### Order of operations in Pass 2 (load-bearing)
+
+```cpp
+answer[i] *= right;     // use current 'right' (product strictly right of i)
+right *= nums[i];       // THEN include nums[i] for the next iteration
+```
+
+If you reverse the order, `right` would include `nums[i]`, contaminating `answer[i]` with itself.
+
+### Why this matters — the two-sweep DP pattern
+
+"For each index, the answer depends on stuff to the left + stuff to the right" → **two-pass with prefix array, then suffix scalar/array**:
+
+| Problem | Forward sweep | Backward sweep |
+|---|---|---|
+| LC 238 Product Except Self | left-products | right-products |
+| LC 42 Trapping Rain Water | maxLeft per index | maxRight per index, water = min - height |
+| LC 84 Largest Rectangle in Histogram | left-bound (smaller bar to left) | right-bound (smaller bar to right) |
+| LC 135 Candy | ratings increases left | ratings increases right, take max |
+| LC 152 Maximum Product Subarray | max/min product ending here | (variant — single pass with min/max) |
+
+### Why this matters for image processing
+
+The two-sweep pattern is the foundation of **summed-area tables (integral images)**:
+- Forward sweep computes prefix sums in 2D
+- Any rectangular region's sum is then O(1) via 4 corner lookups
+- Used in face detection (Viola-Jones), box filters, fast convolution
+
+Same idea: precompute a left-info array, then resolve each query with a constant-time combination. **Two passes can replace an O(n²) brute force with O(n).**
+
+### Common bugs
+
+- **`answer[0]` initialized to `nums[0]`** instead of 1 — prefix product of empty range is 1
+- **Using a second array for right products** — works but wastes O(n) space; the scalar trick is the optimization
+- **Wrong order of `answer[i] *= right` vs `right *= nums[i]`** — must use `right` for `answer[i]` BEFORE updating `right`
+- **Off-by-one on prefix indexing**: `answer[i] = answer[i-1] * nums[i-1]` (NOT `* nums[i]`) — the left product *excludes* the current index
+
+### Mental model
+
+> **"Two sweeps. Forward sweep fills in 'product of everything before me'. Backward sweep multiplies in 'product of everything after me' using a single scalar. Output array doubles as the prefix-product scratch."**
+
+### Memorization aid
+
+> **"Forward sweep: left product. Backward sweep with a scalar: right product. Order in pass 2: read first, update second."**
+
+---
+
+## 16. Three-Reverse In-Place Rotation — LC 189
+
+### The pattern
+
+Right-rotation by `k` decomposes into three in-place reversals:
+
+```cpp
+void rotate(vector<int>& nums, int k) {
+    int n = nums.size();
+    k %= n;                                      // normalize: k can be > n
+    std::reverse(nums.begin(), nums.end());     // 1. reverse all
+    std::reverse(nums.begin(), nums.begin() + k);   // 2. reverse first k
+    std::reverse(nums.begin() + k, nums.end());     // 3. reverse last n-k
+}
+```
+
+**O(n) time, O(1) extra space.**
+
+### Why it works (geometric intuition)
+
+Right-rotation by k splits the array into two pieces that swap places:
+- Last k elements → must move to the front
+- First n-k elements → must move to the back
+
+Reversing the **whole array** flips both pieces' positions (tail-to-front, head-to-back) but also reverses their internal order. The two sub-reverses fix the internal order of each piece.
+
+```
+[A_head | B_tail]                              (original)
+→ reverse all
+[B_tail_reversed | A_head_reversed]
+→ reverse first k (= length of B)
+[B_tail | A_head_reversed]
+→ reverse last n-k (= length of A)
+[B_tail | A_head]                              (rotated)
+```
+
+This is the **block-swap-via-reversal** identity. Equivalent in any context where two adjacent regions need to swap.
+
+### Why `k %= n` is mandatory
+
+Without it: `k = 10` on length-7 array → trying to reverse `nums.begin() + 10` is out-of-bounds. Single most common LC 189 bug.
+
+`k %= n` collapses any number of full rotations into the equivalent ≤ n shift.
+
+### Comparison of approaches
+
+| Approach | Time | Space | Notes |
+|---|---|---|---|
+| Extra array, write to `(i+k)%n` | O(n) | **O(n)** | Simplest. Accepted but doesn't earn the senior signal. |
+| Rotate-by-1, k times | O(n·k) | O(1) | Too slow for large k. |
+| **Three reverses** | **O(n)** | **O(1)** | **Canonical answer.** |
+| Cyclic juggling (GCD cycles) | O(n) | O(1) | Same complexity, more bug-prone. Mention as follow-up if asked. |
+
+### The "destination formula" trap
+
+If you derive `new_position = (i + k) % n` and try to do it in-place with `nums[(i+k)%n] = nums[i]`, **you overwrite values you haven't read yet**. Trace `[1,2,3,4,5,6,7], k=3`:
+- i=0: `nums[3] = 1` → array is `[1,2,3,1,5,6,7]`. Original `nums[3]=4` is destroyed.
+
+The formula is correct as a *destination map*, but you need either:
+- An extra output array (O(n) space), or
+- **Cyclic juggling** that walks gcd(n,k) chains, swapping along each cycle
+
+The three-reverse trick sidesteps the entire bookkeeping problem.
+
+### Where this trick generalizes
+
+| Use case | Application |
+|---|---|
+| Right-rotate array | LC 189 |
+| Left-rotate array | Reverse first n-k, reverse last k, reverse all |
+| Adjacent block swap | Two regions A and B → reverse A, reverse B, reverse all (yields BA) |
+| String rotation | "hello world" ↔ "world hello" via three reverses on chars |
+| Circular buffer time-shift | DSP / signal processing |
+| Image scanline horizontal pan | Camera ISP with wraparound |
+| Memory region rotation | OS / firmware buffer compaction |
+
+The principle: **swapping two adjacent regions in-place = three reverses**. Cheapest in-place block-swap.
+
+### Mental model
+
+> **"Right-rotate-by-k = reverse all, reverse first k, reverse last n-k. The whole-reverse cuts the deck; the two sub-reverses straighten each half."**
+
+### Common bugs
+
+- **Forgetting `k %= n`** — out-of-bounds for `k > n`
+- **Off-by-one on the sub-reverse bounds**: must be `[0, k)` and `[k, n)` — half-open intervals matching `std::reverse`'s convention
+- **Wrong order**: must be all → first-k → last-(n-k). Different orders produce wrong results.
+- **Using the destination-formula in place** without extra storage → overwrites unread data
+
+### Memorization aid
+
+> **"Three reverses, in this order: whole, first k, last n-k. Don't forget `k %= n` at the top."**
+
+---
+
+## 17. Modified Binary Search on Rotated Sorted Array — LC 33
+
+### The pattern
+
+Standard binary search needs a monotonic array. A rotated sorted array isn't monotonic globally, **but at every midpoint, at least one of the two halves is sorted**. Detect which half is sorted, check if target lies in its range, and recurse into the appropriate half.
+
+```cpp
+int search(vector<int>& nums, int target) {
+    int lo = 0, hi = nums.size() - 1;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (nums[mid] == target) return mid;
+
+        if (nums[lo] <= nums[mid]) {
+            // Left half is sorted
+            if (nums[lo] <= target && target < nums[mid]) {
+                hi = mid - 1;
+            } else {
+                lo = mid + 1;
+            }
+        } else {
+            // Right half is sorted
+            if (nums[mid] < target && target <= nums[hi]) {
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+    }
+    return -1;
+}
+```
+
+**O(log n) time, O(1) space.**
+
+### The key insight
+
+After rotation, `nums` looks like two sorted runs joined at a pivot:
+```
+[4, 5, 6, 7 | 0, 1, 2]      pivot between idx 3 and 4
+```
+
+For any midpoint `mid`, the pivot is either in `[lo..mid)` or `(mid..hi]` — not both. **The half without the pivot is sorted.**
+
+To detect which half is sorted: compare `nums[lo]` to `nums[mid]`:
+- `nums[lo] <= nums[mid]` → no pivot crossed in left half → **left is sorted**
+- otherwise → pivot is in left half → **right is sorted**
+
+### The bracket asymmetry in range checks
+
+Once a half is known sorted, decide if `target` is in it using its endpoints:
+```
+left sorted:  nums[lo] <= target < nums[mid]
+right sorted: nums[mid] < target <= nums[hi]
+```
+
+The asymmetric `<=`/`<` is deliberate:
+- `target == nums[mid]` is already handled at the top (returns mid)
+- `target == nums[lo]` or `target == nums[hi]` are valid hits — must include them with `<=`
+
+### Why O(log n)
+
+Each iteration eliminates half the range. The two-step decision rule (which half is sorted, is target in it) is constant-time, so the recurrence is `T(n) = T(n/2) + O(1)` → O(log n).
+
+### When binary search generalizes beyond "monotonic array"
+
+The unlock is: **binary search works whenever a constant-time check at any midpoint can eliminate half the search space**, even if the array structure isn't strictly monotonic.
+
+| Variant | Constant-time check |
+|---|---|
+| LC 33 Search Rotated Sorted | "Which half is sorted?" |
+| LC 153 Find Min in Rotated Sorted | "Which half contains the pivot?" |
+| LC 162 Find Peak Element | "Is mid going up or down?" |
+| LC 4 Median of Two Sorted Arrays | "Are the partitions valid?" |
+| LC 875 Koko Eating Bananas | "Can she finish at speed mid?" |
+| LC 1011 Capacity to Ship Packages | "Is capacity mid sufficient?" |
+
+The last two are **answer-space binary search**: search over the answer range, not the input. Same machinery, different domain.
+
+### Mental model
+
+> **"Two sorted runs glued at a pivot. At every step, one half is sorted — find it, check if target lies in it, search there or the other half."**
+
+### Common bugs
+
+- **`<` vs `<=` on `nums[lo] <= nums[mid]`**: must use `<=` to handle `lo == mid` (single-element range). With strict `<`, the algorithm fails when the range collapses.
+- **`while (lo < hi)` instead of `<=`**: single-element ranges miss the check, returning `-1` for valid targets.
+- **`mid = (lo + hi) / 2`**: integer overflow risk for large arrays. Always use `lo + (hi - lo) / 2`.
+- **Forgetting `nums[mid] == target` check at the top**: leads to infinite loops when `mid` doesn't move.
+- **Off-by-one on lo/hi updates**: must be `mid - 1` and `mid + 1`, never `mid`.
+- **Wrong inequality direction in the in-range check**: confusing `<=` and `<` flips inclusivity at the wrong endpoint.
+
+### What changes if duplicates are allowed (LC 81)
+
+If duplicates exist, the check `nums[lo] <= nums[mid]` becomes ambiguous when `nums[lo] == nums[mid]` (e.g., `[2,2,2,3,4,2]`) — neither half is provably sorted. The fix: when `nums[lo] == nums[mid]`, advance `lo++` and retry. **Worst-case O(n)** for all-duplicate arrays.
+
+LC 33 has unique values → the `<=` check is always informative.
+
+### Why this matters for hardware
+
+- **Memory-mapped register search** when address space has been remapped or rotated (boot ROM trampolines)
+- **Cyclic ring-buffer search** when reads can start mid-cycle
+- **Time-series search in cyclic logs**: find an entry by timestamp in a wrap-around buffer
+- **Pivot detection** in calibration data that's been rotated by sensor mounting orientation
+
+### Memorization aid
+
+> **"At every mid, one half is sorted. Detect via `nums[lo] <= nums[mid]`. Check if target is in the sorted half's range with asymmetric brackets. Search there or the other half. O(log n)."**
+
